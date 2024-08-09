@@ -1,18 +1,18 @@
 ﻿Game,description location
-Worldle,worldle.txt
-Globle,globle.txt
-Globle-capitals,globle-capitals.txt
-Map-game,map-game.txt
-Dinosaur Game,dino-game.txt
-Edge Surfer,edge-surf.txt
-Hole.io,hole.txt
-Agar.io,agar.txt
-Slither.io,slither.txt
-2048,2048.txt
-Paper.io,paper.txt
-Wordle,wordle.txt
-Spelling Bee,spelling.txt
-Connections,connections.txt
-Semantle,semantle.txt
-Tetr.io,tetrio.txt
-Suika Game,suika.txt
+Worldle,game-desc/worldle.txt
+Globle,game-desc/globle.txt
+Globle-capitals,game-desc/globle-capitals.txt
+Map-game,game-desc/map-game.txt
+Dinosaur Game,game-desc/dino-game.txt
+Edge Surfer,game-desc/edge-surf.txt
+Hole.io,game-desc/hole.txt
+Agar.io,game-desc/agar.txt
+Slither.io,game-desc/slither.txt
+2048,game-desc/2048.txt
+Paper.io,game-desc/paper.txt
+Wordle,game-desc/wordle.txt
+Spelling Bee,game-desc/spelling.txt
+Connections,game-desc/connections.txt
+Semantle,game-desc/semantle.txt
+Tetr.io,game-desc/tetrio.txt
+Suika Game,game-desc/suika.txt
