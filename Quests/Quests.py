@@ -42,8 +42,13 @@ class Roles(red_commands.Cog):
         desc_locs = pd.read_excel("games-to-descs.csv)
         all_games = desc_locs['Game']
         all_locs = desc_locs['description location']
-        loc = all_locs[all_games.index(game)] 
-    
+        loc = all_locs[all_games.index(game)]
+        quest = ""
+        with open(loc) as file:
+            content_list = quest+=line for line in file.readlines()
+
+        return quest
+        
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready()  # Wait until the bot is ready
