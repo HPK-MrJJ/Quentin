@@ -2,7 +2,8 @@ from redbot.core import commands, Config
 import discord
 from discord.ext import tasks
 import pandas as pd
-from datetime import datetime, timezone
+from datetime import datetime
+import pytz
 import random
 
 def is_owner_overridable():
@@ -22,12 +23,11 @@ class Roles(red_commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    @tasks.loop(time=datetime.time(hour=12, tzinfo=timezone.utc))
+    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
         # Replace CHANNEL_ID with the ID of the channel you want to send the message to
         channel = self.bot.get_channel(self.config.quests_channel_id())
         if channel:
-            date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             message = write_quest()
             await channel.send(message)
         else:
