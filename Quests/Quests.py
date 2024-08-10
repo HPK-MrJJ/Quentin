@@ -45,7 +45,8 @@ class Roles(red_commands.Cog):
         loc = all_locs[all_games.index(game)]
         quest = ""
         with open(loc) as file:
-            content_list = quest+=line for line in file.readlines()
+            for line in file.readlines():
+                quest += line
 
         return quest
         
