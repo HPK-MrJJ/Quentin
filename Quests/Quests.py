@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 import pytz
 import random
+import aiofiles
 
 def is_owner_overridable():
     # Similar to @commands.is_owner()
@@ -36,17 +37,17 @@ class Roles(red_commands.Cog):
     async def write_quest():
         """generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
         day = datetime.now().strftime("%A").lower()
-        games_by_day = pd.read_excel("games-by-day.csv")
-        game_choices = games_by_day[day]
-        game = game_choices[random.randint(0,len(games_choices)-1)]
-        desc_locs = pd.read_excel("games-to-descs.csv)
+        games_by_day = pd.read_csv("games-by-day.csv")
+        game_choices = games_by_day[day].dropna()
+        game = game_choices.iloc[random.randint(0,len(games_choices)-1)]
+        desc_locs = pd.read_csv("games-to-descs.csv)
         all_games = desc_locs['Game']
         all_locs = desc_locs['description location']
         loc = all_locs[all_games.index(game)]
         quest = ""
-        with open(loc) as file:
+        async with aiofiles.open(loc, mode='r') as file:
             for line in file.readlines():
-                quest += line
+                quest = await file.read()
 
         return quest
         
