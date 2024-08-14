@@ -26,7 +26,6 @@ class Roles(red_commands.Cog):
 
     @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
-        # Replace CHANNEL_ID with the ID of the channel you want to send the message to
         channel_id = await self.config.quests_channel_id()
         channel = self.bot.get_channel(channel_id)
         if channel:
