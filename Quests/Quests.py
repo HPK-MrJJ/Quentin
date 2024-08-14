@@ -56,7 +56,7 @@ class Roles(red_commands.Cog):
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready()  # Wait until the bot is ready
 
-    @is_owner_overridable
+    @is_owner_overridable()
     @commands.command()
      async def set_channel_id(self, ctx, id: int):
         """Set the channel ID for daily messages."""
