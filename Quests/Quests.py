@@ -27,9 +27,10 @@ class Roles(red_commands.Cog):
     @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
         # Replace CHANNEL_ID with the ID of the channel you want to send the message to
-        channel = self.bot.get_channel(self.config.quests_channel_id())
+        channel_id = await self.config.quests_channel_id()
+        channel = self.bot.get_channel(channel_id)
         if channel:
-            message = write_quest()
+            message = await write_quest()
             await channel.send(message)
         else:
             print("Please set the quests channel id.")
@@ -39,8 +40,8 @@ class Roles(red_commands.Cog):
         day = datetime.now().strftime("%A").lower()
         games_by_day = pd.read_csv("games-by-day.csv")
         game_choices = games_by_day[day].dropna()
-        game = game_choices.iloc[random.randint(0,len(games_choices)-1)]
-        desc_locs = pd.read_csv("games-to-descs.csv)
+        game = game_choices.iloc[random.randint(0,len(game_choices)-1)]
+        desc_locs = pd.read_csv("games-to-descs.csv")
         all_games = desc_locs['Game']
         all_locs = desc_locs['description location']
         loc = all_locs[all_games.index(game)]
