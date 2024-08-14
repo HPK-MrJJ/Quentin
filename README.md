@@ -1,3 +1,4 @@
-A discord bot that posts quests and keeps track of DKP over at The Order of the Grey Wardens discord server.
+A discord bot that does various things I want it to do.
 
-Well, it will do that once I write it.
+The Quests cog is for posting daily quests and scoring the quests at TGW (Work In Progress)
+The Docket Updates cog gives me periodic updates in my personal server when court dockets I'm following are updated.
