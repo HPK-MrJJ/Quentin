@@ -1,8 +1,12 @@
-from redbot.core import commands, Config
-import discord
-from discord.ext import tasks
 from datetime import datetime
+import asyncio
+import json
+import aiofiles
+import aiohttp
+import discord
 import pytz
+from discord.ext import tasks
+from redbot.core import commands, Config
 
 class Docket_Updates(red_commands.Cog):
 
@@ -12,21 +16,58 @@ class Docket_Updates(red_commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
         self.config = Config.get_conf(self, identifier=69318888, force_registration=True)
-        self.config.register_guild(quests_channel_id=None)
+        self.config.register_guild(alerts_channel_id=None)
+        self.config.register_guild(dates_by_case = {})
+        self.config.register_guild(auth_token=None)
 
     @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
-        channel_id = await self.config.quests_channel_id()
+        channel_id = await self.config.alerts_channel_id()
+        auth_token = await self.config.auth_token()
         channel = self.bot.get_channel(channel_id)
         if channel:
-            new_stuff = await get_info()
-            if new_stuff:
-                await channel.send(new_stuff)
+            if auth_token:
+                new_stuff = await get_info()
+                if new_stuff:
+                    await channel.send(new_stuff)
+            else:
+                print("Please set the token")
         else:
-            print("Please set the quests channel id.")
+            print("Please set the alerts channel id.")
 
     async def get_info():
-        # soon to be written
+        ret = ""
+        ids = []
+        auth_token = await self.config.auth_token()
+        if not auth_token:
+            print
+        headers = {
+            f"Authorization: Token {auth_token}"
+        }
+        async with aiofiles.open("interesting_cases.txt", mode='r') as file:
+            for line.strip() in file.readlines():
+                ids.append(line)
+        async with aiohttp.ClientSession() as session:
+            all_cases = [fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/",headers=headers) for id in ids]
+            responses = await asyncio.gather(*tasks)
+        dates_by_case = await self.config.dates_by_case()
+        for response in responses:
+            data = json.loads(response)
+            case_id = data['id']
+            date_last_filing = data['date_last_filing']
+            if case_id in dates_by_case:
+                date1 = datetime.strptime(date_last_filing, "%Y-%m-%d")
+                date2 = datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
+                if date1 > date2:
+                    ret += f"{data["case_name"]} has new docket activity!"
+            else:
+                dates_by_case[case_id] = date_last_filing
+        if ret == "":
+            return None
+        else:
+            return ret
+                
+        
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
@@ -36,8 +77,19 @@ class Docket_Updates(red_commands.Cog):
     @commands.command()
     async def set_channel_id(self, ctx, id: int):
         """Set the channel ID for daily messages."""
-        await self.config.quests_channel_id.set(id)  # Save the channel ID to config
-        await ctx.send(f"Quests channel set.")
+        await self.config.alerts_channel_id.set(id)  # Save the channel ID to config
+        await ctx.send(f"alerts channel set.")
+
+    @is_owner_overridable()
+    @commands.command()
+    async def set_token(self, ctx, id: int):
+        """Set token for api requests."""
+        await self.config.auth_token.set(id)  # Save the token to config
+        await ctx.send(f"Token set.")
+
+    async def fetch_url(session, url, headers=None):
+        async with session.get(url,headers=headers) as response:
+            return await response.text()
          
     @commands.Cog.listener()
     async def on_message(self, message):
