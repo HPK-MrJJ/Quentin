@@ -7,7 +7,7 @@ import pytz
 from discord.ext import tasks
 from redbot.core import commands, Config
 
-class Docket_Updates(red_commands.Cog):
+class Docket_Updates(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
