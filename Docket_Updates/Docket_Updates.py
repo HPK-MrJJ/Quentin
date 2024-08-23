@@ -63,7 +63,7 @@ class Docket_Updates(red_commands.Cog):
                 date1 = datetime.strptime(date_last_filing, "%Y-%m-%d")
                 date2 = datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
                 if date1 > date2:
-                    ret += ret += f'{data["case_name"]} has new docket activity!'
+                    ret += f"{data['case_name']} has new docket activity!\n"
             else:
                 dates_by_case[case_id] = date_last_filing
         if ret == "":
