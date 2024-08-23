@@ -1,3 +1,4 @@
+from redbot.core import commands, Config
 import datetime
 import asyncio
 import json
@@ -5,30 +6,23 @@ import aiofiles
 import aiohttp
 import pytz
 from discord.ext import tasks
-from redbot.core import commands, Config
 
 class Docket_Updates(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69318888, force_registration=True)
-        self.config.register_guild(alerts_channel_id=None)
-        self.config.register_guild(dates_by_case = {})
-        self.config.register_guild(auth_token=None)
+        self.config.register_guild(
+            alerts_channel_id=None,
+            dates_by_case={},
+            auth_token=None
+        )
 
     def cog_unload(self):
-        self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
-        
+        self.send_daily_message.cancel()
 
-    def is_owner_overridable():
-    # Similar to @commands.is_owner()
-    # Unlike that, however, this check can be overridden with core Permissions
-        def predicate(ctx):
-            return False
-        return commands.permissions_check(predicate)
-    
-    async def fetch_url(session, url, headers=None):
-        async with session.get(url,headers=headers) as response:
+    async def fetch_url(self, session, url, headers=None):
+        async with session.get(url, headers=headers) as response:
             return await response.text()
 
     @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
@@ -38,7 +32,7 @@ class Docket_Updates(commands.Cog):
         channel = self.bot.get_channel(channel_id)
         if channel:
             if auth_token:
-                new_stuff = await get_info()
+                new_stuff = await self.get_info()
                 if new_stuff:
                     await channel.send(new_stuff)
             else:
@@ -51,58 +45,45 @@ class Docket_Updates(commands.Cog):
         ids = []
         auth_token = await self.config.auth_token()
         if not auth_token:
-            print
+            return None
+        
         headers = {
             "Authorization": f"Token {auth_token}"
         }
         async with aiofiles.open("interesting_cases.txt", mode='r') as file:
-            for line in file.readlines():
-                ids.append(line.strip())
+            ids = [line.strip() for line in await file.readlines()]
+
         async with aiohttp.ClientSession() as session:
-            all_cases = [fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/",headers=headers) for id in ids]
-            responses = await asyncio.gather(*tasks)
+            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
+            responses = await asyncio.gather(*all_cases)
+
         dates_by_case = await self.config.dates_by_case()
         for response in responses:
             data = json.loads(response)
             case_id = data['id']
             date_last_filing = data['date_last_filing']
             if case_id in dates_by_case:
-                date1 = datetime.strptime(date_last_filing, "%Y-%m-%d")
-                date2 = datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
+                date1 = datetime.datetime.strptime(date_last_filing, "%Y-%m-%d")
+                date2 = datetime.datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
                 if date1 > date2:
                     ret += f"{data['case_name']} has new docket activity!\n"
             else:
                 dates_by_case[case_id] = date_last_filing
-        if ret == "":
-            return None
-        else:
-            return ret
-                
-        
+
+        return ret if ret else None
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
-        await self.bot.wait_until_ready()  # Wait until the bot is ready
+        await self.bot.wait_until_ready()
 
-    @is_owner_overridable()
+    @commands.is_owner()
     @commands.command()
     async def set_channel_id(self, ctx, id: int):
-        """Set the channel ID for daily messages."""
-        await self.config.alerts_channel_id.set(id)  # Save the channel ID to config
-        await ctx.send(f"alerts channel set.")
+        await self.config.alerts_channel_id.set(id)
+        await ctx.send("Alerts channel set.")
 
-    @is_owner_overridable()
+    @commands.is_owner()
     @commands.command()
-    async def set_token(self, ctx, id: int):
-        """Set token for api requests."""
-        await self.config.auth_token.set(id)  # Save the token to config
-        await ctx.send(f"Token set.")
-         
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if len(message.content) == 0:
-            return
-        first_char = message.content[0]
-        ctx = await self.bot.get_context(message)
-        if message.author.bot or not first_char.isalpha():
-            return
+    async def set_token(self, ctx, token: str):
+        await self.config.auth_token.set(token)
+        await ctx.send("Token set.")
