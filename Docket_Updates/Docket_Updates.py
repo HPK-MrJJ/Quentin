@@ -20,6 +20,13 @@ class Docket_Updates(commands.Cog):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
         
 
+    def is_owner_overridable():
+    # Similar to @commands.is_owner()
+    # Unlike that, however, this check can be overridden with core Permissions
+        def predicate(ctx):
+            return False
+        return red_commands.permissions_check(predicate)
+    
     async def fetch_url(session, url, headers=None):
         async with session.get(url,headers=headers) as response:
             return await response.text()
