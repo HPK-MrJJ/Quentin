@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import asyncio
 import json
 import aiofiles
@@ -24,7 +24,7 @@ class Docket_Updates(commands.Cog):
         async with session.get(url,headers=headers) as response:
             return await response.text()
 
-    @tasks.loop(datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
         channel_id = await self.config.alerts_channel_id()
         auth_token = await self.config.auth_token()
