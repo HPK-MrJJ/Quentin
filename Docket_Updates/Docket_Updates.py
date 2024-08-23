@@ -25,7 +25,7 @@ class Docket_Updates(commands.Cog):
     # Unlike that, however, this check can be overridden with core Permissions
         def predicate(ctx):
             return False
-        return red_commands.permissions_check(predicate)
+        return commands.permissions_check(predicate)
     
     async def fetch_url(session, url, headers=None):
         async with session.get(url,headers=headers) as response:
