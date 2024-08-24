@@ -12,11 +12,9 @@ class Docket_Updates(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69318888, force_registration=True)
-        self.config.register_guild(
-            alerts_channel_id=0,
-            dates_by_case={},
-            auth_token=0
-        )
+        self.config.register_guild(alerts_channel_id=0)
+        self.config.register_guild(dates_by_case={})
+        self.config.register_guild(auth_token=0)
 
     def cog_unload(self):
         self.send_daily_message.cancel()
