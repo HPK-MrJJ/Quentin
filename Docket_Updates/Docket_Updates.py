@@ -13,9 +13,9 @@ class Docket_Updates(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69318888, force_registration=True)
         self.config.register_guild(
-            alerts_channel_id=None,
+            alerts_channel_id=0,
             dates_by_case={},
-            auth_token=None
+            auth_token=0
         )
 
     def cog_unload(self):
