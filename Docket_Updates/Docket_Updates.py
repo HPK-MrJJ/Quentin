@@ -80,6 +80,56 @@ class Docket_Updates(commands.Cog):
 
         return ret if ret else None
 
+    @commands.is_owner()
+    @commands.command()
+    async def docket_update(self, ctx):
+        """Send a message with the most recent docket entry from each case, ignoring stored dates."""
+        guild = ctx.guild
+        channel_id = await self.config.guild(guild).alerts_channel_id()
+        auth_token = await self.config.guild(guild).auth_token()
+        channel = self.bot.get_channel(channel_id)
+        
+        if not channel:
+            await ctx.send("Alerts channel is not set. Please set the alerts channel ID.")
+            return
+        
+        if not auth_token:
+            await ctx.send("Auth token is not set. Please set the auth token.")
+            return
+        
+        new_stuff = await self.get_most_recent_docket_entries(guild)
+        
+        if new_stuff:
+            await channel.send(new_stuff)
+        else:
+            await ctx.send("No updates found or there was an error.")
+    
+    async def get_most_recent_docket_entries(self, guild):
+        """Fetch the most recent docket entry from each case."""
+        ret = ""
+        ids = []
+        auth_token = await self.config.guild(guild).auth_token()
+        if not auth_token:
+            return None
+        
+        headers = {
+            "Authorization": f"Token {auth_token}"
+        }
+        async with aiofiles.open("interesting_cases.txt", mode='r') as file:
+            ids = [line.strip() for line in await file.readlines()]
+    
+        async with aiohttp.ClientSession() as session:
+            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
+            responses = await asyncio.gather(*all_cases)
+    
+        for response in responses:
+            data = json.loads(response)
+            case_name = data.get('case_name', 'Unknown Case')
+            date_last_filing = data.get('date_last_filing', 'Unknown Date')
+            ret += f"Case: {case_name}\nLast Filing Date: {date_last_filing}\n\n"
+    
+        return ret if ret else None
+
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready()
