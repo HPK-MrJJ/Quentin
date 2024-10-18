@@ -40,8 +40,8 @@ class Docket_Updates(commands.Cog):
             for i in range(0, len(content), 2000):
                 await channel.send(content[i:i+2000])
 
-    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
-    # @tasks.loop(minutes=1)
+    # @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    @tasks.loop(minutes=1)
     async def send_daily_message(self):
         print("Executing daily task")
         for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
@@ -86,13 +86,17 @@ class Docket_Updates(commands.Cog):
             data = json.loads(response)
             case_id = data['id']
             date_last_filing = data['date_last_filing']
+            
             if case_id in dates_by_case:
                 date1 = datetime.datetime.strptime(date_last_filing, "%Y-%m-%d")
                 date2 = datetime.datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
                 if date1 > date2:
                     ret += f"{data['case_name']} has new docket activity!\n"
             else:
+                # For first-time run, add all cases as having new activity
                 dates_by_case[case_id] = date_last_filing
+                ret += f"{data['case_name']} has new docket activity (first-time update)!\n"
+
 
         # Save updated case dates
         await self.config.guild(guild).dates_by_case.set(dates_by_case)
