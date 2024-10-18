@@ -31,6 +31,15 @@ class Docket_Updates(commands.Cog):
         async with session.get(url, headers=headers) as response:
             return await response.text()
 
+    async def send_long_message(channel, content):
+        """Splits a long message into chunks that fit within Discord's 2000 character limit and sends them."""
+        if len(content) <= 2000:
+            await channel.send(content)
+        else:
+            # Split message into chunks of 2000 characters or less
+            for i in range(0, len(content), 2000):
+                await channel.send(content[i:i+2000])
+
     @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
         for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
@@ -132,15 +141,6 @@ class Docket_Updates(commands.Cog):
             ret += f"Case: {case_name}\nLast Filing Date: {date_last_filing}\n\n"
     
         return ret if ret else None
-
-    async def send_long_message(channel, content):
-        """Splits a long message into chunks that fit within Discord's 2000 character limit and sends them."""
-        if len(content) <= 2000:
-            await channel.send(content)
-        else:
-            # Split message into chunks of 2000 characters or less
-            for i in range(0, len(content), 2000):
-                await channel.send(content[i:i+2000])
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
