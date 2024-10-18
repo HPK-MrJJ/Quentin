@@ -1,4 +1,4 @@
-<@&879922862876672000>https://rbeesley.github.io/MicrosoftEdge-SURF/ OR edge://surf/
+https://rbeesley.github.io/MicrosoftEdge-SURF/ OR edge://surf/
 
 this is the microsoft edge equivalent of the dinosaur game. 
 
