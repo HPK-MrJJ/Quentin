@@ -31,7 +31,7 @@ class Docket_Updates(commands.Cog):
         async with session.get(url, headers=headers) as response:
             return await response.text()
 
-    async def send_long_message(channel, content):
+    async def send_long_message(self, channel, content):
         """Splits a long message into chunks that fit within Discord's 2000 character limit and sends them."""
         if len(content) <= 2000:
             await channel.send(content)
