@@ -40,8 +40,10 @@ class Docket_Updates(commands.Cog):
             for i in range(0, len(content), 2000):
                 await channel.send(content[i:i+2000])
 
-    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    # @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    @tasks.loop(minutes=1)
     async def send_daily_message(self):
+        print("Executing daily task")
         for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
             channel_id = await self.config.guild(guild).alerts_channel_id()
             auth_token = await self.config.guild(guild).auth_token()
@@ -71,7 +73,12 @@ class Docket_Updates(commands.Cog):
             ids = [line.strip() for line in await file.readlines()]
 
         async with aiohttp.ClientSession() as session:
-            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
+            all_cases = []
+            for id in ids:
+                try:
+                    all_cases.append(self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers))
+                except Exception as e:
+                    print(f"Error fetching case {id}: {e}")  # Log error
             responses = await asyncio.gather(*all_cases)
 
         dates_by_case = await self.config.guild(guild).dates_by_case()
