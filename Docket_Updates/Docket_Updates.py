@@ -20,6 +20,7 @@ class Docket_Updates(commands.Cog):
             alerts_channel_id=0,
             dates_by_case={},
             auth_token=""
+            owner_id
         )
         # Start the loop task
         self.send_daily_message.start()
@@ -101,7 +102,10 @@ class Docket_Updates(commands.Cog):
         # Save updated case dates
         await self.config.guild(guild).dates_by_case.set(dates_by_case)
 
-        return ret if ret else None
+        owner = await self.bot.get_owner()
+        owner_id = owner.id
+        
+        return f"<@{owner_id}>{ret}" if ret else None
 
     @commands.is_owner()
     @commands.command()
@@ -144,14 +148,17 @@ class Docket_Updates(commands.Cog):
         async with aiohttp.ClientSession() as session:
             all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
             responses = await asyncio.gather(*all_cases)
-    
+            
+        owner = await self.bot.get_owner()
+        owner_id = owner.id
+        
         for response in responses:
             data = json.loads(response)
             case_name = data.get('case_name', 'Unknown Case')
             date_last_filing = data.get('date_last_filing', 'Unknown Date')
             ret += f"Case: {case_name}\nLast Filing Date: {date_last_filing}\n\n"
     
-        return ret if ret else None
+        return f"<@{owner_id}>{ret}" if ret else None
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
