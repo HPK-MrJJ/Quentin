@@ -51,7 +51,7 @@ class Docket_Updates(commands.Cog):
                 if auth_token:
                     new_stuff = await self.get_info(guild)
                     if new_stuff:
-                        await send_long_message(channel, new_stuff)
+                        await self.send_long_message(channel, new_stuff)
                 else:
                     print(f"Please set the token for guild: {guild.name}")
             else:
@@ -112,7 +112,7 @@ class Docket_Updates(commands.Cog):
         new_stuff = await self.get_most_recent_docket_entries(guild)
         
         if new_stuff:
-            await send_long_message(channel, new_stuff)
+            await self.send_long_message(channel, new_stuff)
         else:
             await ctx.send("No updates found or there was an error.")
     
