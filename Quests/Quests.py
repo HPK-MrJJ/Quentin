@@ -6,6 +6,7 @@ from datetime import datetime
 import pytz
 import random
 import aiofiles
+import os
 
 def is_owner_overridable():
     # Similar to @commands.is_owner()
@@ -24,7 +25,7 @@ class Roles(red_commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    @tasks.loop(time=datetime.time(hour=18, tzinfo=pytz.timezone('America/New_York')))
     async def send_daily_message(self):
         channel_id = await self.config.quests_channel_id()
         channel = self.bot.get_channel(channel_id)
@@ -37,12 +38,12 @@ class Roles(red_commands.Cog):
     async def write_quest():
         """generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
         day = datetime.now().strftime("%A").lower()
-        games_by_day = pd.read_csv("games-by-day.csv")
+        games_by_day = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-by-day.csv"))
         game_choices = games_by_day[day].dropna()
         game = game_choices.iloc[random.randint(0,len(game_choices)-1)]
-        desc_locs = pd.read_csv("games-to-descs.csv")
+        desc_locs = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-to-descs.csv"))
         all_games = desc_locs['Game']
-        all_locs = desc_locs['description location']
+        all_locs = os.path.join(os.path.dirname(__file__), desc_locs['description location'])
         loc = all_locs[all_games.index(game)]
         quest = ""
         async with aiofiles.open(loc, mode='r') as file:
