@@ -20,7 +20,6 @@ class Docket_Updates(commands.Cog):
             alerts_channel_id=0,
             dates_by_case={},
             auth_token=""
-            owner_id
         )
         # Start the loop task
         self.send_daily_message.start()
