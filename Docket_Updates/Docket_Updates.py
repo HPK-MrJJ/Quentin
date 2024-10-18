@@ -42,7 +42,7 @@ class Docket_Updates(commands.Cog):
                 if auth_token:
                     new_stuff = await self.get_info(guild)
                     if new_stuff:
-                        await channel.send(new_stuff)
+                        await send_long_message(channel, new_stuff)
                 else:
                     print(f"Please set the token for guild: {guild.name}")
             else:
@@ -103,7 +103,7 @@ class Docket_Updates(commands.Cog):
         new_stuff = await self.get_most_recent_docket_entries(guild)
         
         if new_stuff:
-            await channel.send(new_stuff)
+            await send_long_message(channel, new_stuff)
         else:
             await ctx.send("No updates found or there was an error.")
     
@@ -132,6 +132,15 @@ class Docket_Updates(commands.Cog):
             ret += f"Case: {case_name}\nLast Filing Date: {date_last_filing}\n\n"
     
         return ret if ret else None
+
+    async def send_long_message(channel, content):
+        """Splits a long message into chunks that fit within Discord's 2000 character limit and sends them."""
+        if len(content) <= 2000:
+            await channel.send(content)
+        else:
+            # Split message into chunks of 2000 characters or less
+            for i in range(0, len(content), 2000):
+                await channel.send(content[i:i+2000])
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
