@@ -154,9 +154,6 @@ class Docket_Updates(commands.Cog):
         async with aiohttp.ClientSession() as session:
             all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
             responses = await asyncio.gather(*all_cases)
-            
-        owner = await self.bot.get_owner()
-        owner_id = owner.id
         
         for response in responses:
             data = json.loads(response)
