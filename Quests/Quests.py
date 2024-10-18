@@ -34,32 +34,31 @@ class Roles(red_commands.Cog):
     async def send_daily_message(self):
         for guild in self.bot.guilds:  
             channel_id = await self.config.guild(guild).quests_channel_id()
-            role_id = await self.config.guild(guild).role_id()
-            
-        channel = self.bot.get_channel(channel_id)
-        if channel:
-            if role_id:
-                message = await write_quest()
-                await channel.send(message)
+            role_id = await self.config.guild(guild).quests_role_id()  # Fixed
+
+            channel = self.bot.get_channel(channel_id)  # This line should be inside the loop
+            if channel:
+                if role_id:
+                    message = await self.write_quest()
+                    await channel.send(message)
+                else:
+                    print("Please set the quests role id.")
             else:
-                print("Please set the quests role id.")
-        else:
-            print("Please set the quests channel id.")
-            
-    async def write_quest():
+                print("Please set the quests channel id.")
+
+    async def write_quest(self):
         """generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
         day = datetime.now().strftime("%A").lower()
         games_by_day = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-by-day.csv"))
         game_choices = games_by_day[day].dropna()
-        game = game_choices.iloc[random.randint(0,len(game_choices)-1)]
+        game = game_choices.iloc[random.randint(0, len(game_choices)-1)]
         desc_locs = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-to-descs.csv"))
         all_games = desc_locs['Game']
         all_locs = os.path.join(os.path.dirname(__file__), desc_locs['description location'])
         loc = os.path.join(os.path.dirname(__file__), all_locs[all_games.index(game)])
         quest = ""
         async with aiofiles.open(loc, mode='r') as file:
-            for line in file.readlines():
-                quest = await file.read()
+            quest = await file.read()  # Fixed the quest assignment logic
 
         return quest
         
@@ -71,14 +70,14 @@ class Roles(red_commands.Cog):
     @commands.command()
     async def set_channel_id(self, ctx, id: int):
         """Set the channel ID for daily messages."""
-        await self.config.guild(ctx.guild).channel_id.set(id)
+        await self.config.guild(ctx.guild).quests_channel_id.set(id)  # Fixed
         await ctx.send(f"Quests channel set.")
 
     @is_owner_overridable()
     @commands.command()
     async def set_role_id(self, ctx, id: str):
-        """Set the channel ID for daily messages."""
-        await self.config.guild(ctx.guild).role_id.set(id)
+        """Set the role ID for daily messages."""
+        await self.config.guild(ctx.guild).quests_role_id.set(id)  # Fixed
         await ctx.send(f"Quests role ID set.")
 
     @commands.Cog.listener()
