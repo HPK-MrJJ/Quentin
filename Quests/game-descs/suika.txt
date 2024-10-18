@@ -1,4 +1,4 @@
-<@&879922862876672000> **SUIKA GAME TIME**
+**SUIKA GAME TIME**
 
 Suika game is a game where fruits fall from the sky. If two fruits of the same type touch, they combine into a higher level fruit and your score increases. There's a barrier to how high your pile of fruits can go, though, so watch out for that!
 
