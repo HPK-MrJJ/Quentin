@@ -106,7 +106,7 @@ class Docket_Updates(commands.Cog):
 
         if ret:
             if owner_id != 0:
-                return f"<@{owner_id}>{ret}"
+                return f"<@{owner_id}>\n{ret}"
             else:
                 return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
         else:
@@ -165,7 +165,7 @@ class Docket_Updates(commands.Cog):
 
         if ret:
             if owner_id != 0:
-                return f"<@{owner_id}>{ret}"
+                return f"<@{owner_id}>\n{ret}"
             else:
                 return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
         else:
