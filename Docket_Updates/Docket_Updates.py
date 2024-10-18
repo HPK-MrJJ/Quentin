@@ -55,7 +55,7 @@ class Docket_Updates(commands.Cog):
         headers = {
             "Authorization": f"Token {auth_token}"
         }
-        async with aiofiles.open("interesting_cases.txt", mode='r') as file:
+        async with aiofiles.open(os.path.join(os.path.dirname(__file__), 'interesting_cases.txt'), mode='r') as file:
             ids = [line.strip() for line in await file.readlines()]
 
         async with aiohttp.ClientSession() as session:
