@@ -19,7 +19,8 @@ class Docket_Updates(commands.Cog):
         self.config.register_guild(
             alerts_channel_id=0,
             dates_by_case={},
-            auth_token=""
+            auth_token="",
+            owner_id=0,
         )
         # Start the loop task
         self.send_daily_message.start()
@@ -101,10 +102,16 @@ class Docket_Updates(commands.Cog):
         # Save updated case dates
         await self.config.guild(guild).dates_by_case.set(dates_by_case)
 
-        owner = await self.bot.get_owner()
-        owner_id = owner.id
-        
-        return f"<@{owner_id}>{ret}" if ret else None
+        owner_id = await self.config.guild(guild).owner_id()
+
+        if ret:
+            if owner_id != 0:
+                return f"<@{owner_id}>{ret}"
+            else:
+                return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
+        else:
+            return
+                
 
     @commands.is_owner()
     @commands.command()
@@ -157,7 +164,15 @@ class Docket_Updates(commands.Cog):
             date_last_filing = data.get('date_last_filing', 'Unknown Date')
             ret += f"Case: {case_name}\nLast Filing Date: {date_last_filing}\n\n"
     
-        return f"<@{owner_id}>{ret}" if ret else None
+        owner_id = await self.config.guild(guild).owner_id()
+
+        if ret:
+            if owner_id != 0:
+                return f"<@{owner_id}>{ret}"
+            else:
+                return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
+        else:
+            return
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
@@ -176,3 +191,10 @@ class Docket_Updates(commands.Cog):
         """Set the authentication token for the court listener API."""
         await self.config.guild(ctx.guild).auth_token.set(token)
         await ctx.send("Token set.")
+
+    @commands.is_owner()
+    @commands.command()
+    async def set_owner_id(self, ctx, id: int):
+        """Set the owner id"""
+        await self.config.guild(ctx.guild).owner_id.set(id)
+        await ctx.send("Owner ID set.")
