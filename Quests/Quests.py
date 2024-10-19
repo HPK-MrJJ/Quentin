@@ -56,19 +56,29 @@ class Quests(commands.Cog):
             print(f"An error occured somewhere that makes me want to cry: {e}.")
 
     async def write_quest(self):
-        """generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
+        """Generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
         day = datetime.datetime.now().strftime("%A").lower()
+        
+        # Read the games for the day
         games_by_day = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-by-day.csv"))
         game_choices = games_by_day[day].dropna()
-        game = game_choices.iloc[random.randint(0, len(game_choices)-1)]
+        game = game_choices.iloc[random.randint(0, len(game_choices) - 1)]  # Choose a random game
+        
+        # Read the descriptions
         desc_locs = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-to-descs.csv"))
-        all_games = desc_locs['Game']
-        all_locs = os.path.join(os.path.dirname(__file__), desc_locs['description location'])
-        loc = os.path.join(os.path.dirname(__file__), all_locs[all_games.index(game)])
+        
+        # Get the location corresponding to the chosen game
+        game_index = desc_locs[desc_locs['Game'] == game].index[0]
+        description_location = desc_locs.at[game_index, 'description location']
+        
+        # Build the full path to the description file
+        loc = os.path.join(os.path.dirname(__file__), description_location)
+        
+        # Read the quest description from the file
         quest = ""
         async with aiofiles.open(loc, mode='r') as file:
-            quest = await file.read()  # Fixed the quest assignment logic
-
+            quest = await file.read()
+    
         return quest
         
     @send_daily_message.before_loop
