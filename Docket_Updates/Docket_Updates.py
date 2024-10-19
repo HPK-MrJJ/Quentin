@@ -87,7 +87,8 @@ class Docket_Updates(commands.Cog):
         # Retrieve the saved dates_by_case from config
         dates_by_case = await self.config.guild(guild).dates_by_case()
         print(f"Loaded dates_by_case for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
-    
+
+        change = False
         for response in responses:
             data = json.loads(response)
             case_id = str(data['id'])
@@ -97,15 +98,20 @@ class Docket_Updates(commands.Cog):
                 date1 = datetime.datetime.strptime(date_last_filing, "%Y-%m-%d")
                 date2 = datetime.datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
                 if date1 > date2:
-                    ret += f"{data['case_name']} has new docket activity!\n"
+                    ret += f"{data['case_name']}{data['docket_number']} has new docket activity!\n"
+                    dates_by_case[case_id] = date1
+                    change = True
             else:
                 # For first-time run, add all cases as having new activity
                 dates_by_case[case_id] = date_last_filing
-                ret += f"{data['case_name']} has new docket activity (first-time update)!\n"
+                ret += f"This is the first time I am seeing {data['case_name']}{data['docket_number']}!\n"
     
-        # Save the updated dates back into the configuration
-        print(f"Saving updated dates for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
-        await self.config.guild(guild).dates_by_case.set(dates_by_case)
+        if change:
+            # Save the updated dates back into the configuration
+            print(f"Saving updated dates for guild: {guild.name}, cases: {dates_by_case}")
+            await self.config.guild(guild).dates_by_case.set(dates_by_case)
+        else:
+            print("I've got nothing new this time around.")
     
         owner_id = await self.config.guild(guild).owner_id()
 
@@ -163,7 +169,7 @@ class Docket_Updates(commands.Cog):
             data = json.loads(response)
             case_name = data.get('case_name', 'Unknown Case')
             date_last_filing = data.get('date_last_filing', 'Unknown Date')
-            ret += f"Case: {case_name}\nLast Filing Date: {date_last_filing}\n\n"
+            ret += f"Case: {case_name} - {data['docket_number']}\nLast Filing Date: {date_last_filing}\n\n"
     
         owner_id = await self.config.guild(guild).owner_id()
 
