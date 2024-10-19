@@ -31,8 +31,8 @@ class Quests(commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    # @tasks.loop(time=datetime.time(hour=18))
-    @tasks.loop(minutes=1)
+    @tasks.loop(time=datetime.time(hour=18))
+    # @tasks.loop(minutes=1)
     async def send_daily_message(self):
         print("Executing quest task")
         try:
