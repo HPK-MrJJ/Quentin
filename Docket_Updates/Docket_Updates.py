@@ -101,9 +101,15 @@ class Docket_Updates(commands.Cog):
         print(f"Saving updated dates for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
         await self.config.guild(guild).dates_by_case.set(dates_by_case)
     
-        return ret if ret else None
+        owner_id = await self.config.guild(guild).owner_id()
 
-                
+        if ret:
+            if owner_id != 0:
+                return f"<@{owner_id}>\n{ret}"
+            else:
+                return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
+        else:
+            return                
 
     @commands.is_owner()
     @commands.command()
