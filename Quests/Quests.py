@@ -67,8 +67,8 @@ class Quests(commands.Cog):
 
     @is_owner_overridable()
     @commands.command()
-    async def set_channel_id(self, ctx, id: int):
-        """Set the channel ID for daily messages."""
+    async def set_quest_channel_id(self, ctx, id: int):
+        """Set the channel ID for daily quests."""
         await self.config.guild(ctx.guild).quests_channel_id.set(id)  # Fixed
         await ctx.send(f"Quests channel set.")
 
