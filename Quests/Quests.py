@@ -15,9 +15,9 @@ def is_owner_overridable():
     # Unlike that, however, this check can be overridden with core Permissions
     def predicate(ctx):
         return False
-    return red_commands.permissions_check(predicate)
+    return commands.permissions_check(predicate)
     
-class Roles(red_commands.Cog):
+class Quests(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
