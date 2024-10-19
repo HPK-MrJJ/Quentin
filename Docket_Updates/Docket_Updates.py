@@ -87,7 +87,7 @@ class Docket_Updates(commands.Cog):
             case_id = data['id']
             date_last_filing = data['date_last_filing']
     
-            if case_id in dates_by_case:
+            if str(case_id) in dates_by_case:
                 date1 = datetime.datetime.strptime(date_last_filing, "%Y-%m-%d")
                 date2 = datetime.datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
                 if date1 > date2:
