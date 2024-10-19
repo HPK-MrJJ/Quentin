@@ -5,7 +5,6 @@ import asyncio
 
 import aiohttp
 import aiofiles
-import pytz
 
 from discord.ext import tasks
 from redbot.core import commands, Config
@@ -41,7 +40,7 @@ class Docket_Updates(commands.Cog):
             for i in range(0, len(content), 2000):
                 await channel.send(content[i:i+2000])
 
-    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    @tasks.loop(time=datetime.time(hour=12))
     # @tasks.loop(minutes=1)
     async def send_daily_message(self):
         print("Executing daily task")
