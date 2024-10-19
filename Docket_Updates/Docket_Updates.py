@@ -121,7 +121,7 @@ class Docket_Updates(commands.Cog):
             else:
                 return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
         else:
-            return                
+            return "Nothing today, boss."               
 
     @commands.is_owner()
     @commands.command()
