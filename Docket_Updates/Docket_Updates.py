@@ -41,8 +41,8 @@ class Docket_Updates(commands.Cog):
             for i in range(0, len(content), 2000):
                 await channel.send(content[i:i+2000])
 
-    @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
-    # @tasks.loop(minutes=1)
+    # @tasks.loop(time=datetime.time(hour=12, tzinfo=pytz.timezone('America/New_York')))
+    @tasks.loop(minutes=1)
     async def send_daily_message(self):
         print("Executing daily task")
         for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
@@ -70,24 +70,23 @@ class Docket_Updates(commands.Cog):
         headers = {
             "Authorization": f"Token {auth_token}"
         }
+    
         async with aiofiles.open(os.path.join(os.path.dirname(__file__), 'interesting_cases.txt'), mode='r') as file:
             ids = [line.strip() for line in await file.readlines()]
-
+    
         async with aiohttp.ClientSession() as session:
-            all_cases = []
-            for id in ids:
-                try:
-                    all_cases.append(self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers))
-                except Exception as e:
-                    print(f"Error fetching case {id}: {e}")  # Log error
+            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
             responses = await asyncio.gather(*all_cases)
-
+    
+        # Retrieve the saved dates_by_case from config
         dates_by_case = await self.config.guild(guild).dates_by_case()
+        print(f"Loaded dates_by_case for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
+    
         for response in responses:
             data = json.loads(response)
             case_id = data['id']
             date_last_filing = data['date_last_filing']
-            
+    
             if case_id in dates_by_case:
                 date1 = datetime.datetime.strptime(date_last_filing, "%Y-%m-%d")
                 date2 = datetime.datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
@@ -97,20 +96,13 @@ class Docket_Updates(commands.Cog):
                 # For first-time run, add all cases as having new activity
                 dates_by_case[case_id] = date_last_filing
                 ret += f"{data['case_name']} has new docket activity (first-time update)!\n"
-
-
-        # Save updated case dates
+    
+        # Save the updated dates back into the configuration
+        print(f"Saving updated dates for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
         await self.config.guild(guild).dates_by_case.set(dates_by_case)
+    
+        return ret if ret else None
 
-        owner_id = await self.config.guild(guild).owner_id()
-
-        if ret:
-            if owner_id != 0:
-                return f"<@{owner_id}>\n{ret}"
-            else:
-                return f"{ret}\n\n**Please set an owner ID so I can ping you.**"
-        else:
-            return
                 
 
     @commands.is_owner()
