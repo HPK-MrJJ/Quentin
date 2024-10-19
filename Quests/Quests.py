@@ -1,6 +1,6 @@
 import os
 import random
-from datetime import datetime
+import datetime
 
 import pandas as pd
 import aiofiles
@@ -29,7 +29,7 @@ class Quests(commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    @tasks.loop(time=datetime.time(hour=12))
+    @tasks.loop(time=datetime.time(hour=18))
     async def send_daily_message(self):
         for guild in self.bot.guilds:  
             channel_id = await self.config.guild(guild).quests_channel_id()
