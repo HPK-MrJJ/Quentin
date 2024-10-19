@@ -85,6 +85,14 @@ class Quests(commands.Cog):
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready()  # Wait until the bot is ready
 
+    @tasks.loop(time=datetime.time(hour=17, minute=59))
+    async def score_quests(self):
+        """go through all the messages posted in the quest channel since the last quest was posted
+        and score them based off of whatever the quest was and react with :white_check_mark: to the ones scored.
+        Then store the scores temporarily in a config by username, faction, score and post a txt of that list of scores in the quests channel.
+        After the txt is posted, use the config to add the scores from each player to their respective faction (need some more configs to store faction scores),
+        Then clear the config."""
+
     @is_owner_overridable()
     @commands.command()
     async def set_quest_channel_id(self, ctx, id: int):
