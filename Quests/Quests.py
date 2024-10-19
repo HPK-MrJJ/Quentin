@@ -1,6 +1,7 @@
 import os
 import random
 import datetime
+import asynchio
 
 import pandas as pd
 import aiofiles
@@ -56,7 +57,7 @@ class Quests(commands.Cog):
 
     async def write_quest(self):
         """generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
-        day = datetime.now().strftime("%A").lower()
+        day = datetime.datetime.now().strftime("%A").lower()
         games_by_day = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-by-day.csv"))
         game_choices = games_by_day[day].dropna()
         game = game_choices.iloc[random.randint(0, len(game_choices)-1)]
