@@ -3,7 +3,6 @@ import random
 from datetime import datetime
 
 import pandas as pd
-import pytz
 import aiofiles
 import discord
 from discord.ext import tasks
