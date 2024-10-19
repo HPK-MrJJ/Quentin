@@ -45,20 +45,26 @@ class Docket_Updates(commands.Cog):
     @tasks.loop(minutes=1)
     async def send_daily_message(self):
         print("Executing daily task")
-        for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
-            channel_id = await self.config.guild(guild).alerts_channel_id()
-            auth_token = await self.config.guild(guild).auth_token()
-            channel = self.bot.get_channel(channel_id)
-            
-            if channel:
-                if auth_token:
-                    new_stuff = await self.get_info(guild)
-                    if new_stuff:
-                        await self.send_long_message(channel, new_stuff)
+        try:
+            for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
+                channel_id = await self.config.guild(guild).alerts_channel_id()
+                auth_token = await self.config.guild(guild).auth_token()
+                channel = self.bot.get_channel(channel_id)
+                
+                if channel:
+                    if auth_token:
+                        new_stuff = await self.get_info(guild)
+                        if new_stuff:
+                            await self.send_long_message(channel, new_stuff)
+                    else:
+                        print(f"Please set the token for guild: {guild.name}")
                 else:
-                    print(f"Please set the token for guild: {guild.name}")
-            else:
-                print(f"Please set the alerts channel id for guild: {guild.name}.")
+                    print(f"Please set the alerts channel id for guild: {guild.name}.")
+        except asynchio.CancelledError:
+            print("Winding down the daily message task...")
+            raise
+        except Exception as e:
+            print(f"An error occured in the daily message task loop that makes me want to cry: {e}")
 
     async def get_info(self, guild):
         ret = ""
