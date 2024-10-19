@@ -44,7 +44,7 @@ class Quests(commands.Cog):
                 if channel:
                     if role_id:
                         message = await self.write_quest()
-                        await channel.send(message)
+                        await channel.send(f"<@&{role_id}>\n{message}")
                     else:
                         print("Please set the quests role id.")
                 else:
