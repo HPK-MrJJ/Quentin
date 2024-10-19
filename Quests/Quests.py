@@ -31,19 +31,26 @@ class Quests(commands.Cog):
 
     @tasks.loop(time=datetime.time(hour=18))
     async def send_daily_message(self):
-        for guild in self.bot.guilds:  
-            channel_id = await self.config.guild(guild).quests_channel_id()
-            role_id = await self.config.guild(guild).quests_role_id()  # Fixed
-
-            channel = self.bot.get_channel(channel_id)  # This line should be inside the loop
-            if channel:
-                if role_id:
-                    message = await self.write_quest()
-                    await channel.send(message)
+        print("Executing quest task")
+        try:
+            for guild in self.bot.guilds:  
+                channel_id = await self.config.guild(guild).quests_channel_id()
+                role_id = await self.config.guild(guild).quests_role_id()  # Fixed
+    
+                channel = self.bot.get_channel(channel_id)  # This line should be inside the loop
+                if channel:
+                    if role_id:
+                        message = await self.write_quest()
+                        await channel.send(message)
+                    else:
+                        print("Please set the quests role id.")
                 else:
-                    print("Please set the quests role id.")
-            else:
-                print("Please set the quests channel id.")
+                    print("Please set the quests channel id.")
+        except asynchio.CancelledError:
+            print("Winding down the quest task.")
+            raise
+        except Exception as e:
+            print(f"An error occured somewhere that makes me want to cry: {e}.")
 
     async def write_quest(self):
         """generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
