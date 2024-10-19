@@ -26,6 +26,8 @@ class Quests(commands.Cog):
             quests_role_id=None
         )
 
+    self.send_daily_message.start()
+
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
