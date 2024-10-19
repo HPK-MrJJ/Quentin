@@ -49,7 +49,7 @@ class Quests(commands.Cog):
                         print("Please set the quests role id.")
                 else:
                     print("Please set the quests channel id.")
-        except asynchio.CancelledError:
+        except asyncio.CancelledError:
             print("Winding down the quest task.")
             raise
         except Exception as e:
