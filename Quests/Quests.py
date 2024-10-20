@@ -114,45 +114,47 @@ class Quests(commands.Cog):
                 await self.bot.add_reaction(message, :white_check_mark:)
 
     async def scored(message: discord.Message, quest_name: str):
+        """direct the program to the right method to score the quest of the day"""
         quest_name = lower(quest_name)
         if quest_name == '2048':
-            return number_game_score(message)
+            return self.number_game_score(message)
         elif quest_name == 'worLdle':
-            return worLdle_score(message)
+            return self.worLdle_score(message)
         elif quest_name == 'globle':
-            return globle_score(message)
+            return self.globle_score(message)
         elif quest_name == 'globle-capitals':
-            return globleC_score(message)
+            return self.globleC_score(message)
         elif quest_name == 'map-game':
-            return map_game_score(message)
+            return self.map_game_score(message)
         elif quest_name == 'dinosaur game':
-            return dino_score(message)
+            return self.dino_score(message)
         elif quest_name == 'edge surfer':
-            return edge_surf_score(message)
+            return self.edge_surf_score(message)
         elif quest_name == 'hole.io':
-            return holeio_score(message)
+            return self.holeio_score(message)
         elif quest_name == 'agar.io':
-            return agario_score(message)
+            return self.agario_score(message)
         elif quest_name == 'slither.io':
-            return slitherio_score(message)
+            return self.slitherio_score(message)
         elif quest_name == 'wordle':
-            return wordle_score(message)
+            return self.wordle_score(message)
         elif quest_name == 'spelling bee':
-            return spell_bee_score(message)
+            return self.spell_bee_score(message)
         elif quest_name == 'connections':
-            return connections_score(message)
+            return self.connections_score(message)
         elif quest_name == 'semantle':
-            return semantle_score(message)
+            return self.semantle_score(message)
         elif quest_name == 'tetr.io':
-            return tetrio_score(message)
+            return self.tetrio_score(message)
         elif quest_name == 'suika game':
-            return suika_score(message)
+            return self.suika_score(message)
         elif quest_name == 'bandle':
-            return bandle_score(message)
+            return self.bandle_score(message)
         else:
-            print("Ur about to get some mad errors, bro.")
+            print("Yer about to get some mad errors, bro.")
 
-    
+    async def number_game_score(message: discord.Message):
+        # so it begins
 
     @is_owner_overridable()
     @commands.command()
