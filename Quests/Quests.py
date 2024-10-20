@@ -24,7 +24,8 @@ class Quests(commands.Cog):
         self.config = Config.get_conf(self, identifier=69312578, force_registration=True)
         self.config.register_guild(
             quests_channel_id=None,
-            quests_role_id=None
+            quests_role_id=None,
+            quest_count=0
         )
         self.send_daily_message.start()
 
@@ -38,13 +39,15 @@ class Quests(commands.Cog):
         try:
             for guild in self.bot.guilds:  
                 channel_id = await self.config.guild(guild).quests_channel_id()
-                role_id = await self.config.guild(guild).quests_role_id()  # Fixed
+                role_id = await self.config.guild(guild).quests_role_id() 
+                quest_count = await self.config.guild(guild).quest_count()
     
-                channel = self.bot.get_channel(channel_id)  # This line should be inside the loop
+                channel = self.bot.get_channel(channel_id)  
                 if channel:
                     if role_id:
                         message = await self.write_quest()
                         await channel.send(f"<@&{role_id}>\n{message}")
+                        await self.config.guild(ctx.guild).quests_count.set(quest_count+1)
                     else:
                         print("Please set the quests role id.")
                 else:
@@ -92,19 +95,24 @@ class Quests(commands.Cog):
         Then store the scores temporarily in a config by username, faction, score and post a txt of that list of scores in the quests channel.
         After the txt is posted, use the config to add the scores from each player to their respective faction (need some more configs to store faction scores),
         Then clear the config."""
+        count = await self.config.guild(guild).quest_count()
+        if count > 0:
+            # score quests, etc.
+        else:
+            return
 
     @is_owner_overridable()
     @commands.command()
     async def set_quest_channel_id(self, ctx, id: int):
         """Set the channel ID for daily quests."""
-        await self.config.guild(ctx.guild).quests_channel_id.set(id)  # Fixed
+        await self.config.guild(ctx.guild).quests_channel_id.set(id)  
         await ctx.send(f"Quests channel set.")
 
     @is_owner_overridable()
     @commands.command()
     async def set_role_id(self, ctx, id: str):
         """Set the role ID for daily messages."""
-        await self.config.guild(ctx.guild).quests_role_id.set(id)  # Fixed
+        await self.config.guild(ctx.guild).quests_role_id.set(id) 
         await ctx.send(f"Quests role ID set.")
 
     @commands.Cog.listener()
