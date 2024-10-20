@@ -1,7 +1,7 @@
 import os
 import random
-import datetime
 import asyncio
+from datetime, import datetime, timedelta
 
 import pandas as pd
 import aiofiles
@@ -25,7 +25,8 @@ class Quests(commands.Cog):
         self.config.register_guild(
             quests_channel_id=None,
             quests_role_id=None,
-            quest_count=0
+            quest_count=0,
+            current_quest=None
         )
         self.send_daily_message.start()
 
@@ -45,9 +46,11 @@ class Quests(commands.Cog):
                 channel = self.bot.get_channel(channel_id)  
                 if channel:
                     if role_id:
-                        message = await self.write_quest()
+                        duple = await self.write_quest()
+                        message = duple[1]
                         await channel.send(f"<@&{role_id}>\n{message}")
                         await self.config.guild(ctx.guild).quests_count.set(quest_count+1)
+                        await self.config.guild(ctx.guild).current_quest.set(duple[0])
                     else:
                         print("Please set the quests role id.")
                 else:
@@ -60,7 +63,7 @@ class Quests(commands.Cog):
 
     async def write_quest(self):
         """Generate a quest announcement depending on the day and return it as a string to be sent by the bot"""
-        day = datetime.datetime.now().strftime("%A").lower()
+        day = datetime.now().strftime("%A").lower()
         
         # Read the games for the day
         games_by_day = pd.read_csv(os.path.join(os.path.dirname(__file__), "games-by-day.csv"))
@@ -82,7 +85,7 @@ class Quests(commands.Cog):
         async with aiofiles.open(loc, mode='r') as file:
             quest = await file.read()
     
-        return quest
+        return [game, quest]
         
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
@@ -100,6 +103,14 @@ class Quests(commands.Cog):
             # score quests, etc.
         else:
             return
+
+    async def fetch_messages(self, channel_id, after_date: int):
+        channel = self.bot.get_channel(channel_id)
+        last_quest = datetime.now() - timedelta(hours=23, minutes=59)
+        current_quest = await self.config.guild(guild).current_quest()
+        async for message in channel.history(after=last_quest):
+            if message.scored(current_quest): #the scored method scores the message and returns true if it scored, otherwise false
+                await self.bot.react_quietly(message, :white_check_mark:)
 
     @is_owner_overridable()
     @commands.command()
