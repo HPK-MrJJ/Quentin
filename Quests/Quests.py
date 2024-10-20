@@ -98,18 +98,20 @@ class Quests(commands.Cog):
         Then store the scores temporarily in a config by username, faction, score and post a txt of that list of scores in the quests channel.
         After the txt is posted, use the config to add the scores from each player to their respective faction (need some more configs to store faction scores),
         Then clear the config."""
-        count = await self.config.guild(guild).quest_count()
-        if count > 0:
-            # score quests, etc.
-        else:
-            return
+        for guild in self.bot.guilds:
+            count = await self.config.guild(guild).quest_count()
+            channel_id = await self.config.guild(guild).quests_channel_id()
+            if count > 0:
+                self.fetch_messages(channel_id)
+            else:
+                return
 
-    async def fetch_messages(self, channel_id, after_date: int):
+    async def fetch_messages(self, channel_id):
         channel = self.bot.get_channel(channel_id)
         last_quest = datetime.now() - timedelta(hours=23, minutes=59)
         current_quest = await self.config.guild(guild).current_quest()
         async for message in channel.history(after=last_quest):
-            if message.scored(current_quest): #the scored method scores the message and returns true if it scored, otherwise false
+            if self.scored(message, current_quest): #the scored method scores the message and returns true if it scored, otherwise false
                 await self.bot.react_quietly(message, :white_check_mark:)
 
     @is_owner_overridable()
