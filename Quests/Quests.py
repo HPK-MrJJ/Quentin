@@ -103,16 +103,56 @@ class Quests(commands.Cog):
             channel_id = await self.config.guild(guild).quests_channel_id()
             if count > 0:
                 self.fetch_messages(channel_id)
-            else:
-                return
 
     async def fetch_messages(self, channel_id):
+        """get the messages that need scoring and send them to the scoring method"""
         channel = self.bot.get_channel(channel_id)
         last_quest = datetime.now() - timedelta(hours=23, minutes=59)
         current_quest = await self.config.guild(guild).current_quest()
         async for message in channel.history(after=last_quest):
-            if self.scored(message, current_quest): #the scored method scores the message and returns true if it scored, otherwise false
-                await self.bot.react_quietly(message, :white_check_mark:)
+            if self.scored(message, str(current_quest)): #the scored method scores the message and returns true if it scored, otherwise false
+                await self.bot.add_reaction(message, :white_check_mark:)
+
+    async def scored(message: discord.Message, quest_name: str):
+        quest_name = lower(quest_name)
+        if quest_name == '2048':
+            return number_game_score(message)
+        elif quest_name == 'worLdle':
+            return worLdle_score(message)
+        elif quest_name == 'globle':
+            return globle_score(message)
+        elif quest_name == 'globle-capitals':
+            return globleC_score(message)
+        elif quest_name == 'map-game':
+            return map_game_score(message)
+        elif quest_name == 'dinosaur game':
+            return dino_score(message)
+        elif quest_name == 'edge surfer':
+            return edge_surf_score(message)
+        elif quest_name == 'hole.io':
+            return holeio_score(message)
+        elif quest_name == 'agar.io':
+            return agario_score(message)
+        elif quest_name == 'slither.io':
+            return slitherio_score(message)
+        elif quest_name == 'wordle':
+            return wordle_score(message)
+        elif quest_name == 'spelling bee':
+            return spell_bee_score(message)
+        elif quest_name == 'connections':
+            return connections_score(message)
+        elif quest_name == 'semantle':
+            return semantle_score(message)
+        elif quest_name == 'tetr.io':
+            return tetrio_score(message)
+        elif quest_name == 'suika game':
+            return suika_score(message)
+        elif quest_name == 'bandle':
+            return bandle_score(message)
+        else:
+            print("Ur about to get some mad errors, bro.")
+
+    
 
     @is_owner_overridable()
     @commands.command()
