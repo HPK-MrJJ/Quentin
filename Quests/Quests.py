@@ -142,58 +142,58 @@ class Quests(commands.Cog):
             count = await self.config.guild(guild).quest_count()
             channel_id = await self.config.guild(guild).quests_channel_id()
             if count > 0:
-                self.fetch_messages(channel_id)
+                self.fetch_messages(channel_id, guild)
 
-    async def fetch_messages(self, channel_id):
+    async def fetch_messages(self, channel_id, guild):
         """get the messages that need scoring and send them to the scoring method"""
         channel = self.bot.get_channel(channel_id)
         last_quest = datetime.now() - timedelta(hours=23, minutes=59)
         current_quest = await self.config.guild(guild).current_quest()
         async for message in channel.history(after=last_quest):
-            if self.scored(message, str(current_quest)): #the scored method scores the message and returns true if it scored, otherwise false
+            if self.scored(guild, message, str(current_quest)): #the scored method scores the message and returns true if it scored, otherwise false
                 await self.bot.add_reaction(message, :white_check_mark:)
 
-    async def scored(message: discord.Message, quest_name: str):
+    async def scored(guild, message: discord.Message, quest_name: str):
         """direct the program to the right method to score the quest of the day"""
         quest_name = lower(quest_name)
         if quest_name == '2048':
-            return self.number_game_score(message)
+            return self.number_game_score(guild, message)
         elif quest_name == 'worLdle':
-            return self.worLdle_score(message)
+            return self.worLdle_score(guild, message)
         elif quest_name == 'globle':
-            return self.globle_score(message)
+            return self.globle_score(guild, message)
         elif quest_name == 'globle-capitals':
-            return self.globleC_score(message)
+            return self.globleC_score(guild, message)
         elif quest_name == 'map-game':
-            return self.map_game_score(message)
+            return self.map_game_score(guild, message)
         elif quest_name == 'dinosaur game':
-            return self.dino_score(message)
+            return self.dino_score(guild, message)
         elif quest_name == 'edge surfer':
-            return self.edge_surf_score(message)
+            return self.edge_surf_score(guild, message)
         elif quest_name == 'hole.io':
-            return self.holeio_score(message)
+            return self.holeio_score(guild, message)
         elif quest_name == 'agar.io':
-            return self.agario_score(message)
+            return self.agario_score(guild, message)
         elif quest_name == 'slither.io':
-            return self.slitherio_score(message)
+            return self.slitherio_score(guild, message)
         elif quest_name == 'wordle':
-            return self.wordle_score(message)
+            return self.wordle_score(guild, message)
         elif quest_name == 'spelling bee':
-            return self.spell_bee_score(message)
+            return self.spell_bee_score(guild, message)
         elif quest_name == 'connections':
-            return self.connections_score(message)
+            return self.connections_score(guild, message)
         elif quest_name == 'semantle':
-            return self.semantle_score(message)
+            return self.semantle_score(guild, message)
         elif quest_name == 'tetr.io':
-            return self.tetrio_score(message)
+            return self.tetrio_score(guild, message)
         elif quest_name == 'suika game':
-            return self.suika_score(message)
+            return self.suika_score(guild, message)
         elif quest_name == 'bandle':
-            return self.bandle_score(message)
+            return self.bandle_score(guild, message)
         else:
             return False
 
-    async def number_game_score(message: discord.Message):
+    async def number_game_score(self, guild: discord.Guild, message: discord.Message):
         dkp = 0
         attachments = message.attachments
         if len(attachments) != 1:
@@ -212,10 +212,21 @@ class Quests(commands.Cog):
                 dkp = 5
             else:
                 dkp = 10
-        f = await self.config.guild(ctx.guild).ferelden()
-        a = # Fill out the rest of these to assign role objects to vars and check if the user has those roles.
-            
-            return True
+                
+            f = await self.config.guild(guild).ferelden()
+            a = await self.config.guild(guild).anderfels()
+            n = await self.config.guild(guild).nevarra()
+            o = await self.config.guild(guild).orlais()
+            t = await self.config.guild(guild).tevinder()
+    
+            if f in message.author.roles:
+                faction_score = await self.config.guild(guild).ferelden_score()
+                await self.config.guild(guild).ferelden_score.set(faction_score + dkp)
+            if a in message.author.roles:
+                # go through every faction and add score to total, and add to score ledger.
+
+                
+                return True
         else:
             return False
 
@@ -233,6 +244,8 @@ class Quests(commands.Cog):
         await self.config.guild(ctx.guild).quests_role_id.set(id) 
         await ctx.send(f"Quests role ID set.")
 
+    @is_owner_overridable()
+    @commands.command()
     async def set_key(self, ctx, key: str):
         """Set the api key for the OCR API."""
         await self.config.guild(ctx.guild).api_key.set(key)
