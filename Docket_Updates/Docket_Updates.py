@@ -59,7 +59,7 @@ class Docket_Updates(commands.Cog):
                         print(f"Please set the token for guild: {guild.name}")
                 else:
                     print(f"Please set the alerts channel id for guild: {guild.name}.")
-        except asynchio.CancelledError:
+        except asyncio.CancelledError:
             print("Winding down the daily message task...")
             raise
         except Exception as e:
