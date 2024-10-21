@@ -30,6 +30,11 @@ class Quests(commands.Cog):
             quest_count=0,
             current_quest=None,
             api_key=None
+            ferelden=discord.utils.get(ctx.guild.roles, name='Ferelden'),
+            anderfels=discord.utils.get(ctx.guild.roles, name='Anderfels'),
+            nevarra=discord.utils.get(ctx.guild.roles, name='Nevarra'),
+            orlais=discord.utils.get(ctx.guild.roles, name='Orlais'),
+            tevinter=discord.utils.get(ctx.guild.roles, name='Tevinter'),
             ferelden_score=0,
             anderfels_score=0,
             nevarra_score=0,
@@ -189,6 +194,7 @@ class Quests(commands.Cog):
             return False
 
     async def number_game_score(message: discord.Message):
+        dkp = 0
         attachments = message.attachments
         if len(attachments) != 1:
             return False
@@ -199,6 +205,16 @@ class Quests(commands.Cog):
         match = re.search(pattern, text)
     
         if match:
+            score = int(match)
+            if score < 2500:
+                dkp = 3
+            elif score < 5000:
+                dkp = 5
+            else:
+                dkp = 10
+        f = await self.config.guild(ctx.guild).ferelden()
+        a = # Fill out the rest of these to assign role objects to vars and check if the user has those roles.
+            
             return True
         else:
             return False
