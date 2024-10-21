@@ -3,6 +3,7 @@ import random
 import asyncio
 from datetime, import datetime, timedelta
 
+import re
 import pandas as pd
 import aiohttp
 import aiofiles
@@ -27,16 +28,39 @@ class Quests(commands.Cog):
             quests_channel_id=None,
             quests_role_id=None,
             quest_count=0,
-            current_quest=None
+            current_quest=None,
+            api_key=None
         )
         self.send_daily_message.start()
 
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    async def fetch_url(self, session, url, headers=None):
-        async with session.get(url, headers=headers) as response:
-            return await response.text()
+    async def ocr(self, url):
+        url = 'https://api.ocr.space/parse/image'
+        api_key = await self.config.guild(guild).api_key()
+        
+        # Payload for the OCR API
+        payload = {
+            'apikey': api_key,
+            'url': url,
+            'language': eng,
+            'isOverlayRequired': False,
+        }
+    
+        # Making the async request
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=payload) as response:
+                if response.status != 200:
+                    raise Exception(f"Error: API request failed with status code {response.status}")
+                
+                # Parse the JSON response
+                result = await response.json()
+                
+                if result['IsErroredOnProcessing']:
+                    raise Exception(result['ErrorMessage'][0])
+    
+                return result['ParsedResults']
 
     @tasks.loop(time=datetime.time(hour=18))
     # @tasks.loop(minutes=1)
@@ -47,19 +71,23 @@ class Quests(commands.Cog):
                 channel_id = await self.config.guild(guild).quests_channel_id()
                 role_id = await self.config.guild(guild).quests_role_id() 
                 quest_count = await self.config.guild(guild).quest_count()
+                api_key = await self.config.guild(guild).api_key()
     
-                channel = self.bot.get_channel(channel_id)  
-                if channel:
-                    if role_id:
-                        duple = await self.write_quest()
-                        message = duple[1]
-                        await channel.send(f"<@&{role_id}>\n{message}")
-                        await self.config.guild(ctx.guild).quests_count.set(quest_count+1)
-                        await self.config.guild(ctx.guild).current_quest.set(duple[0])
+                channel = self.bot.get_channel(channel_id)
+                if api_key:
+                    if channel:
+                        if role_id:
+                            duple = await self.write_quest()
+                            message = duple[1]
+                            await channel.send(f"<@&{role_id}>\n{message}")
+                            await self.config.guild(ctx.guild).quests_count.set(quest_count+1)
+                            await self.config.guild(ctx.guild).current_quest.set(duple[0])
+                        else:
+                            print("Please set the quests role id.")
                     else:
-                        print("Please set the quests role id.")
+                        print("Please set the quests channel id.")
                 else:
-                    print("Please set the quests channel id.")
+                    print("Please set the OCR API key.")
         except asyncio.CancelledError:
             print("Winding down the quest task.")
             raise
@@ -98,11 +126,7 @@ class Quests(commands.Cog):
 
     @tasks.loop(time=datetime.time(hour=17, minute=59))
     async def score_quests(self):
-        """go through all the messages posted in the quest channel since the last quest was posted
-        and score them based off of whatever the quest was and react with :white_check_mark: to the ones scored.
-        Then store the scores temporarily in a config by username, faction, score and post a txt of that list of scores in the quests channel.
-        After the txt is posted, use the config to add the scores from each player to their respective faction (need some more configs to store faction scores),
-        Then clear the config."""
+        """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
             count = await self.config.guild(guild).quest_count()
             channel_id = await self.config.guild(guild).quests_channel_id()
@@ -156,10 +180,22 @@ class Quests(commands.Cog):
         elif quest_name == 'bandle':
             return self.bandle_score(message)
         else:
-            print("Yer about to get some mad errors, bro.")
+            return False
 
     async def number_game_score(message: discord.Message):
-        # so it begins
+        attachments = message.attachments
+        if len(attachments) != 1:
+            return False
+        image = attachments[0]
+        image_contents = self.ocr(attachment.url)
+        
+        pattern = r'SCORE\r\n([0-9]+)'
+        match = re.search(pattern, text)
+    
+        if match:
+            return True # How to get the score int returned as well, added to the correct faction, etc.
+        else:
+            return False
 
     @is_owner_overridable()
     @commands.command()
@@ -174,6 +210,11 @@ class Quests(commands.Cog):
         """Set the role ID for daily messages."""
         await self.config.guild(ctx.guild).quests_role_id.set(id) 
         await ctx.send(f"Quests role ID set.")
+
+    async def set_key(self, ctx, key: str):
+        """Set the api key for the OCR API."""
+        await self.config.guild(ctx.guild).api_key.set(key)
+        await ctx.send("API Key set.")
 
     @commands.Cog.listener()
     async def on_message(self, message):
