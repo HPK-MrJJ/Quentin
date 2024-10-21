@@ -4,6 +4,7 @@ import asyncio
 from datetime, import datetime, timedelta
 
 import pandas as pd
+import aiohttp
 import aiofiles
 import discord
 from discord.ext import tasks
@@ -32,6 +33,10 @@ class Quests(commands.Cog):
 
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
+
+    async def fetch_url(self, session, url, headers=None):
+        async with session.get(url, headers=headers) as response:
+            return await response.text()
 
     @tasks.loop(time=datetime.time(hour=18))
     # @tasks.loop(minutes=1)
