@@ -30,6 +30,12 @@ class Quests(commands.Cog):
             quest_count=0,
             current_quest=None,
             api_key=None
+            ferelden_score=0,
+            anderfels_score=0,
+            nevarra_score=0,
+            orlais_score=0,
+            tevinter_score=0,
+            score_log=[]
         )
         self.send_daily_message.start()
 
@@ -193,7 +199,7 @@ class Quests(commands.Cog):
         match = re.search(pattern, text)
     
         if match:
-            return True # How to get the score int returned as well, added to the correct faction, etc.
+            return True
         else:
             return False
 
