@@ -220,16 +220,44 @@ class Quests(commands.Cog):
             t = await self.config.guild(guild).tevinder()
     
             if f in message.author.roles:
-                faction_score = await self.config.guild(guild).ferelden_score()
-                await self.config.guild(guild).ferelden_score.set(faction_score + dkp)
-            if a in message.author.roles:
-                # go through every faction and add score to total, and add to score ledger.
-
-                
+                await self.count_score('ferelden', dkp, guild)
                 return True
+            elif a in message.author.roles:
+                await self.count_score('anderfels', dkp, guild)
+                return True
+            elif n in message.author.roles:
+                await self.count_score('nevarra', dkp, guild)
+                return True
+            elif o in message.author.roles:
+                await self.count_score('orlais', dkp, guild)
+            elif t in message.author.roles:
+                await self.count_score('tevinder', dkp, guild)
+            else:
+                return False
+                
         else:
             return False
 
+    async def count_score(faction, score, guild):
+        if faction == 'ferelden':
+            faction_score = await self.config.guild(guild).ferelden_score()
+            await self.config.guild(guild).ferelden_score.set(faction_score + dkp)
+        elif faction == 'anderfels':
+            faction_score = await self.config.guild(guild).anderfels_score()
+            await self.config.guild(guild).anderfels_score.set(faction_score + dkp)
+        elif faction == 'nevarra':
+            faction_score = await self.config.guild(guild).nevarra_score()
+            await self.config.guild(guild).nevarra_score.set(faction_score + dkp)
+        elif faction == 'orlais':
+            faction_score = await self.config.guild(guild).orlais_score()
+            await self.config.guild(guild).orlais_score.set(faction_score + dkp)
+        elif faction == 'tevinder':
+            faction_score = await self.config.guild(guild).tevinder_score()
+            await self.config.guild(guild).tevinder_score.set(faction_score + dkp)
+        score_log = await self.config.guild(guild).score_log()
+        score_log.append(f"Added {dkp} points for {faction} from {message.author}.")
+        await self.config.guils(guild).score_log.set(score_log)
+        
     @is_owner_overridable()
     @commands.command()
     async def set_quest_channel_id(self, ctx, id: int):
