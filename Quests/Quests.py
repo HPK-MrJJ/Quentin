@@ -133,12 +133,17 @@ class Quests(commands.Cog):
         
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
-        await self.bot.wait_until_ready()  # Wait until the bot is ready
+        await self.bot.wait_until_ready() 
+
+    @score_quests.before_loop
+    async def before_score_quest(self):
+        await self.bot.wait_until_ready()
 
     @tasks.loop(time=datetime.time(hour=17, minute=59))
     async def score_quests(self):
         """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
+            self.config.guild(guild).score_log.set([]) # clear the score log before starting each scoring cycle
             count = await self.config.guild(guild).quest_count()
             channel_id = await self.config.guild(guild).quests_channel_id()
             if count > 0:
@@ -230,8 +235,10 @@ class Quests(commands.Cog):
                 return True
             elif o in message.author.roles:
                 await self.count_score('orlais', dkp, guild)
+                return True
             elif t in message.author.roles:
                 await self.count_score('tevinder', dkp, guild)
+                return True
             else:
                 return False
                 
@@ -271,8 +278,10 @@ class Quests(commands.Cog):
                 return True
             elif o in message.author.roles:
                 await self.count_score('orlais', dkp, guild)
+                return True
             elif t in message.author.roles:
                 await self.count_score('tevinder', dkp, guild)
+                return True
             else:
                 return False
                 
@@ -295,6 +304,7 @@ class Quests(commands.Cog):
         elif faction == 'tevinder':
             faction_score = await self.config.guild(guild).tevinder_score()
             await self.config.guild(guild).tevinder_score.set(faction_score + dkp)
+            
         score_log = await self.config.guild(guild).score_log()
         score_log.append(f"Added {dkp} points for {faction} from {message.author}.")
         await self.config.guils(guild).score_log.set(score_log)
