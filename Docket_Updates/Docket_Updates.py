@@ -98,7 +98,7 @@ class Docket_Updates(commands.Cog):
                 date2 = datetime.datetime.strptime(dates_by_case[case_id], "%Y-%m-%d")
                 if date1 > date2:
                     ret += f"{data['case_name']}{data['docket_number']} has new docket activity!\n"
-                    dates_by_case[case_id] = date1
+                    dates_by_case[case_id] = date1.strftime("%Y-%m-%d")
                     change = True
             else:
                 # For first-time run, add all cases as having new activity
