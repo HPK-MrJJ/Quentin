@@ -158,7 +158,7 @@ class Quests(commands.Cog):
         quest_name = lower(quest_name)
         if quest_name == '2048':
             return self.number_game_score(guild, message)
-        elif quest_name == 'worLdle':
+        elif quest_name == 'worldle':
             return self.worLdle_score(guild, message)
         elif quest_name == 'globle':
             return self.globle_score(guild, message)
@@ -212,6 +212,47 @@ class Quests(commands.Cog):
                 dkp = 5
             else:
                 dkp = 10
+                
+            f = await self.config.guild(guild).ferelden()
+            a = await self.config.guild(guild).anderfels()
+            n = await self.config.guild(guild).nevarra()
+            o = await self.config.guild(guild).orlais()
+            t = await self.config.guild(guild).tevinder()
+    
+            if f in message.author.roles:
+                await self.count_score('ferelden', dkp, guild)
+                return True
+            elif a in message.author.roles:
+                await self.count_score('anderfels', dkp, guild)
+                return True
+            elif n in message.author.roles:
+                await self.count_score('nevarra', dkp, guild)
+                return True
+            elif o in message.author.roles:
+                await self.count_score('orlais', dkp, guild)
+            elif t in message.author.roles:
+                await self.count_score('tevinder', dkp, guild)
+            else:
+                return False
+                
+        else:
+            return False
+
+    async def worLdle_score(self, guild: discord.Guild, message: discord.Message):
+        dkp = 0
+        contents = message.content
+        
+        pattern = r'\)\s(\d)/6\s\('
+        match = re.search(pattern, content)
+        
+        if match:
+            score = int(match.group(1))
+            if score == 1:
+                dkp = 10
+            elif score == 2 or score == 3:
+                dkp = 5
+            else:
+                dkp = 2
                 
             f = await self.config.guild(guild).ferelden()
             a = await self.config.guild(guild).anderfels()
