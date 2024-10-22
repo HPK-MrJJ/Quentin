@@ -55,7 +55,7 @@ class Quests(commands.Cog):
         payload = {
             'apikey': api_key,
             'url': url,
-            'language': eng,
+            'language': 'eng',
             'isOverlayRequired': False,
         }
     
