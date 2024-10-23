@@ -260,6 +260,25 @@ class Quests(commands.Cog):
                 dkp = 5
             else:
                 dkp = 2
+
+            if ':compass:' in contents:
+                dkp += 1
+            if ':star:' in contents:
+                dkp += 1
+            if ':triangular_flag_on_post:' in contents:
+                dkp += 1
+            if ':abc:' in contents:
+                dkp += 1
+            if ':couple:' in contents:
+                dkp += 1
+            if ':coin:' in contents:
+                dkp += 1
+            if ':speaking_head:' in contents:
+                dkp += 1
+            if ':triangular_ruler:' in contents:
+                dkp += 1
+            if ':cityscapes:' in contents:
+                dkp += 1
                 
             f = await self.config.guild(guild).ferelden()
             a = await self.config.guild(guild).anderfels()
