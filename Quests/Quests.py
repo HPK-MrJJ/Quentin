@@ -165,10 +165,8 @@ class Quests(commands.Cog):
             return self.number_game_score(guild, message)
         elif quest_name == 'worldle':
             return self.worLdle_score(guild, message)
-        elif quest_name == 'globle':
+        elif 'globle' in quest_name: # score globle and globle-capital the same way
             return self.globle_score(guild, message)
-        elif quest_name == 'globle-capitals':
-            return self.globleC_score(guild, message)
         elif quest_name == 'map-game':
             return self.map_game_score(guild, message)
         elif quest_name == 'dinosaur game':
