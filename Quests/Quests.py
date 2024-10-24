@@ -311,7 +311,7 @@ class Quests(commands.Cog):
         dkp = 0
         content = message.content
 
-        pattern = r'Avg\. Guesses:\s*(\d+)'
+        pattern = r'_square:\s*=\s*(\d+)'
         match = re.search(pattern, content)
 
         if match:
