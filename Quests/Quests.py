@@ -307,6 +307,50 @@ class Quests(commands.Cog):
         else:
             return False
 
+    async def globle_score(self, guild: discord.Guild, message: discord.Message):
+        dkp = 0
+        content = message.content
+
+        pattern = r'Avg\. Guesses:\s*(\d+)'
+        match = re.search(pattern, content)
+
+        if match:
+            
+            score = int(match.group(1))
+            if score <= 5:
+                dkp = 5
+            elif score <= 10:
+                dkp = 3
+            else:
+                dkp = 1
+
+            f = await self.config.guild(guild).ferelden()
+            a = await self.config.guild(guild).anderfels()
+            n = await self.config.guild(guild).nevarra()
+            o = await self.config.guild(guild).orlais()
+            t = await self.config.guild(guild).tevinder()
+    
+            if f in message.author.roles:
+                await self.count_score('ferelden', dkp, guild)
+                return True
+            elif a in message.author.roles:
+                await self.count_score('anderfels', dkp, guild)
+                return True
+            elif n in message.author.roles:
+                await self.count_score('nevarra', dkp, guild)
+                return True
+            elif o in message.author.roles:
+                await self.count_score('orlais', dkp, guild)
+                return True
+            elif t in message.author.roles:
+                await self.count_score('tevinder', dkp, guild)
+                return True
+            else:
+                return False
+                
+        else:
+            return False
+
     async def count_score(faction, score, guild):
         if faction == 'ferelden':
             faction_score = await self.config.guild(guild).ferelden_score()
