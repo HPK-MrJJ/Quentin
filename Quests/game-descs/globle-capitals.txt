@@ -4,8 +4,8 @@ https://globle-capitals.com/
 
 Be the best capital guesser of the land!
 
-5 DKP for playing
-10 DKP for ten guesses or less
-20 DKP for least guesses
+1 DKP for playing
+3 DKP for 6-10 guesses
+5 DKP for 5 or less guesses
 
 Share in #return-quest in the next 24 hours.
