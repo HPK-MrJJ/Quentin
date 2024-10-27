@@ -200,7 +200,7 @@ class Quests(commands.Cog):
         if len(attachments) != 1:
             return False
         image = attachments[0]
-        image_contents = self.ocr(attachment.url)
+        image_contents = self.ocr(image.url)
         
         pattern = r'SCORE\r\n([0-9]+)'
         match = re.search(pattern, text)
