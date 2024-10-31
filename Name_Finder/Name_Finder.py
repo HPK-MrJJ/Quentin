@@ -1,6 +1,7 @@
 import gzip
 import aiofiles
 import aiohttp
+import asynchio
 from io import BytesIO
 import xml.etree.ElementTree as ET
 import urllib.request
@@ -60,7 +61,7 @@ class Name_Finder(commands.Cog):
                         async with aiofiles.open("available_nations.txt", "w") as file:
                             for i,name in enumerate(loom_nations):
                                 print(f"{i+1} of {len(loom_nations)}")
-                                if check_nation_foundability(name):
+                                if await check_nation_foundability(name):
                                     await file.write(f"{name}\n")
                         try:
                             await channel.send(file=discord.File("available_nations.txt"))
@@ -102,6 +103,30 @@ class Name_Finder(commands.Cog):
             raise
         except Exception as e:
             print(f"An error occured in the daily message task loop that makes me want to cry: {e}")
+
+    async def check_nation_foundability(nation_name):
+        await asyncio.sleep(6)  # Async sleep for 6 seconds between requests
+        url = "https://www.nationstates.net/template-overall=none/page=boneyard"
+        data = {"nation": nation_name, "submit": "1"}
+        headers = {"User-Agent": "kakastania"}
+    
+        # Encode the data to URL-encoded format
+        data_encoded = urllib.parse.urlencode(data).encode("utf-8")
+    
+        # Make an asynchronous HTTP POST request with aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data_encoded, headers=headers) as response:
+                response_text = await response.text()
+    
+        # Check if the response contains the desired message
+        return "Available! This name may be used to found a new nation." in response_text
+
+    @commands.is_owner()
+    @commands.command()
+    async def set_channel_id(self, ctx, id: int):
+        """Set the alerts channel ID for the guild."""
+        await self.config.guild(ctx.guild).alerts_channel_id.set(id)
+        await ctx.send("Alerts channel set.")
         
 
     @send_daily_message.before_loop
