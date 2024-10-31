@@ -33,6 +33,7 @@ class Name_Finder(commands.Cog):
 
     async def download_and_process_xml(channel, url):
         temp_path = None
+        owner_id = await self.config.guild(guild).owner_id()
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers={'User-Agent': 'kakastania'}) as response:
@@ -65,6 +66,7 @@ class Name_Finder(commands.Cog):
                                     await file.write(f"{name}\n")
                         try:
                             await channel.send(file=discord.File("available_nations.txt"))
+                            await channel.send(f"{owner_id}")
                         finally:
                             if os.path.exists("available_nations.txt"):
                                 os.remove("available_nations.txt")
@@ -87,15 +89,19 @@ class Name_Finder(commands.Cog):
         try:
             for guild in self.bot.guilds:  # Loop through all guilds the bot is part of
                 channel_id = await self.config.guild(guild).alerts_channel_id()
+                owner_id = await self.config.guild(guild).owner_id()
                 channel = self.bot.get_channel(channel_id)
                 
                 if channel:
-                    date = (datetime.now() - timedelta(days=1)).replace(year=(datetime.now() - timedelta(days=1)).year - 5).strftime("%Y-%m-%d")
-                    output_file = f'data/{date}-Nations.xml'
-                    try:
-                        await download_and_save_xml(channel, f'https://www.nationstates.net/archive/nations/{date}-nations-xml.gz')
-                    except Exception as e:
-                        return
+                    if owner_id:
+                        date = (datetime.now() - timedelta(days=1)).replace(year=(datetime.now() - timedelta(days=1)).year - 5).strftime("%Y-%m-%d")
+                        output_file = f'data/{date}-Nations.xml'
+                        try:
+                            await download_and_save_xml(channel, f'https://www.nationstates.net/archive/nations/{date}-nations-xml.gz')
+                        except Exception as e:
+                            return
+                    else:
+                        print("Please set the owner ID so that I can ping you.")
                 else:
                     print(f"Please set the alerts channel id for guild: {guild.name}.")
         except asyncio.CancelledError:
@@ -127,7 +133,13 @@ class Name_Finder(commands.Cog):
         """Set the alerts channel ID for the guild."""
         await self.config.guild(ctx.guild).alerts_channel_id.set(id)
         await ctx.send("Alerts channel set.")
-        
+
+    @commands.is_owner()
+    @commands.command()
+    async def set_owner_id(self, ctx, id: int):
+        """Set the owner id"""
+        await self.config.guild(ctx.guild).owner_id.set(id)
+        await ctx.send("Owner ID set.")        
 
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
