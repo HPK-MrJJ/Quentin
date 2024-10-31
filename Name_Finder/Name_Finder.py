@@ -93,7 +93,7 @@ class Name_Finder(commands.Cog):
                 channel = self.bot.get_channel(channel_id)
                 
                 if channel:
-                    if owner_id:
+                    if owner_id != 0:
                         date = (datetime.now() - timedelta(days=1)).replace(year=(datetime.now() - timedelta(days=1)).year - 5).strftime("%Y-%m-%d")
                         output_file = f'data/{date}-Nations.xml'
                         try:
