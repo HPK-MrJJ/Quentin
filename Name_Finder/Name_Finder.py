@@ -1,16 +1,16 @@
+import os
+import time
 import gzip
-import aiofiles
-import aiohttp
-import asynchio
+import tempfile
+from datetime import datetime, timedelta
 from io import BytesIO
-import xml.etree.ElementTree as ET
 import urllib.request
 import urllib.parse
-from datetime import datetime, timedelta
-import time
-import tempfile
-import os
+import xml.etree.ElementTree as ET
 
+import aiofiles
+import aiohttp
+import asyncio
 from discord.ext import tasks
 from redbot.core import commands, Config
 
