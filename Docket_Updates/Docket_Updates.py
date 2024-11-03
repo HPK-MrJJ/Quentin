@@ -80,7 +80,7 @@ class Docket_Updates(commands.Cog):
             ids = [line.strip() for line in await file.readlines()]
     
         async with aiohttp.ClientSession() as session:
-            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
+            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v4/dockets/{id}/", headers=headers) for id in ids]
             responses = await asyncio.gather(*all_cases)
     
         # Retrieve the saved dates_by_case from config
@@ -161,7 +161,7 @@ class Docket_Updates(commands.Cog):
             ids = [line.strip() for line in await file.readlines()]
     
         async with aiohttp.ClientSession() as session:
-            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v3/dockets/{id}/", headers=headers) for id in ids]
+            all_cases = [self.fetch_url(session, f"https://www.courtlistener.com/api/rest/v4/dockets/{id}/", headers=headers) for id in ids]
             responses = await asyncio.gather(*all_cases)
         
         for response in responses:
