@@ -149,7 +149,7 @@ class Name_Finder(commands.Cog):
 
     @commands.is_owner()
     @commands.command()
-    async def set_owner_id(self, ctx, id: int):
+    async def set_owner_id_names(self, ctx, id: int):
         """Set the owner ID for the guild."""
         await self.config.guild(ctx.guild).owner_id.set(id)
         await ctx.send("Owner ID set.")        
