@@ -98,7 +98,7 @@ class Name_Finder(commands.Cog):
                 os.remove(temp_path)
                 logger.info(f"Temporary file {temp_path} has been removed.")
 
-    @tasks.loop(time=time(hour=14))
+    @tasks.loop(time=time(hour=6))
     # @tasks.loop(minutes=1)
     async def send_daily_message(self):
         """Loop task to send a daily message."""
