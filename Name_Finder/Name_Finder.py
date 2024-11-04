@@ -2,7 +2,7 @@ import os
 import gzip
 import tempfile
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from io import BytesIO
 import urllib.parse
 import xml.etree.ElementTree as ET
