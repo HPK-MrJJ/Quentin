@@ -142,7 +142,7 @@ class Name_Finder(commands.Cog):
 
     @commands.is_owner()
     @commands.command()
-    async def set_channel_id(self, ctx, id: int):
+    async def set_channel_id_names(self, ctx, id: int):
         """Set the alerts channel ID for the guild."""
         await self.config.guild(ctx.guild).alerts_channel_id.set(id)
         await ctx.send("Alerts channel set.")
