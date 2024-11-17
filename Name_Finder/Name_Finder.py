@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 import aiofiles
 import aiohttp
 import asyncio
+import discord
 from discord.ext import tasks
 from redbot.core import commands, Config
 
@@ -26,6 +27,7 @@ class Name_Finder(commands.Cog):
             alerts_channel_id=0,
             owner_id=0,
         )
+        self.semaphore = asyncio.Semaphore(10) 
         # Start the loop task
         self.send_daily_message.start()
 
@@ -61,20 +63,37 @@ class Name_Finder(commands.Cog):
                         loom_nations = []
 
                         # Find nations matching specific criteria
-                        for nation in root.findall(".//NATION"):
-                            last_activity = nation.find("LASTACTIVITY").text
-                            population = int(nation.find("POPULATION").text)
-                            if last_activity in {"27 days ago", "59 days ago"} and population < 1000:
-                                loom_nations.append(nation.find("NAME").text)
-
-                        logger.info(f"This will take {len(loom_nations)*(1/600)} hours.")
-
-                        foundables = []
-                        async with aiofiles.open("available_nations.txt", "w") as file:
+                        async with aiofiles.open(os.path.join(tempfile.gettempdir(), "available_nations.txt"), "w") as file:
                             for i, name in enumerate(loom_nations):
                                 logger.info(f"{i+1} of {len(loom_nations)}")
                                 if await self.check_nation_foundability(name):
                                     await file.write(f"{name}\n")
+
+                        logger.info(f"This will take {len(loom_nations)*(1/600)} hours.")
+
+                        foundables = []
+
+                        # Create tasks for each nation
+                        tasks = [
+                            self.check_nation_foundability(name) for name in loom_nations
+                        ]
+                        
+                        # Run the tasks with asyncio.gather
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        
+                        # Collect successful results
+                        for i, (name, result) in enumerate(zip(loom_nations, results)):
+                            logger.info(f"{i+1} of {len(loom_nations)} processed")
+                            if isinstance(result, Exception):
+                                logger.error(f"Error for nation {name}: {result}")
+                            elif result:  # Nation is available
+                                foundables.append(name)
+                        
+                        # Write foundable nations to the file
+                        file_path = os.path.join(tempfile.gettempdir(), "available_nations.txt")
+                        async with aiofiles.open(file_path, "w") as file:
+                            for name in foundables:
+                                await file.write(f"{name}\n")
 
                         try:
                             await channel.send(file=discord.File("available_nations.txt"))
@@ -128,17 +147,18 @@ class Name_Finder(commands.Cog):
 
     async def check_nation_foundability(self, nation_name):
         """Check if a nation name is available for founding."""
-        await asyncio.sleep(6)  # Async sleep to manage request rate
         url = "https://www.nationstates.net/template-overall=none/page=boneyard"
         data = {"nation": nation_name, "submit": "1"}
         headers = {"User-Agent": "kakastania"}
-
+    
         data_encoded = urllib.parse.urlencode(data).encode("utf-8")
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=data_encoded, headers=headers) as response:
-                response_text = await response.text()
-
+    
+        async with self.semaphore:  # Enforce throttling
+            await asyncio.sleep(6)  # Delay to respect API rate limits
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, data=data_encoded, headers=headers) as response:
+                    response_text = await response.text()
+    
         return "Available! This name may be used to found a new nation." in response_text
 
     @commands.is_owner()
