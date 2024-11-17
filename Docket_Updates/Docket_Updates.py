@@ -85,7 +85,7 @@ class Docket_Updates(commands.Cog):
     
         # Retrieve the saved dates_by_case from config
         dates_by_case = await self.config.guild(guild).dates_by_case()
-        print(f"Loaded dates_by_case for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
+        # print(f"Loaded dates_by_case for guild: {guild.name}, cases: {dates_by_case}")  # Debugging
 
         change = False
         for response in responses:
@@ -107,7 +107,7 @@ class Docket_Updates(commands.Cog):
     
         if change:
             # Save the updated dates back into the configuration
-            print(f"Saving updated dates for guild: {guild.name}, cases: {dates_by_case}")
+            # print(f"Saving updated dates for guild: {guild.name}, cases: {dates_by_case}")
             await self.config.guild(guild).dates_by_case.set(dates_by_case)
         else:
             print("I've got nothing new this time around.")
