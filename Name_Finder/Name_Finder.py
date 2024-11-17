@@ -38,7 +38,7 @@ class Name_Finder(commands.Cog):
         """Download XML data, process it, and send results if conditions are met."""
         temp_path = None
         owner_id = await self.config.guild(guild).owner_id()
-
+    
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers={'User-Agent': 'kakastania'}) as response:
@@ -46,10 +46,10 @@ class Name_Finder(commands.Cog):
                         # Read and decompress response content
                         with gzip.GzipFile(fileobj=BytesIO(await response.read())) as gzipped_file:
                             xml_text = gzipped_file.read()
-
+    
                         # Parse XML content
                         root = ET.fromstring(xml_text)
-
+    
                         # Create a temporary file to store the XML data
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp_file:
                             tmp_file.write(ET.tostring(root))
@@ -58,61 +58,64 @@ class Name_Finder(commands.Cog):
                         logger.info(f"XML file downloaded and saved temporarily at {temp_path}")
                         
                         # Re-parse the XML data for processing
-                        tree = ET.parse(temp_path)
-                        root = tree.getroot()
                         loom_nations = []
-
-                        # Find nations matching specific criteria
-                        async with aiofiles.open(os.path.join(tempfile.gettempdir(), "available_nations.txt"), "w") as file:
-                            for i, name in enumerate(loom_nations):
-                                logger.info(f"{i+1} of {len(loom_nations)}")
-                                if await self.check_nation_foundability(name):
-                                    await file.write(f"{name}\n")
-
+    
+                        for nation in root.findall(".//NATION"):
+                            last_activity = nation.find("LASTACTIVITY").text if nation.find("LASTACTIVITY") is not None else ""
+                            population = int(nation.find("POPULATION").text) if nation.find("POPULATION") is not None else 0
+    
+                            if last_activity in {"27 days ago", "59 days ago"} and population < 1000:
+                                loom_nations.append(nation.find("NAME").text)
+    
+                        if not loom_nations:
+                            logger.info("No nations matching the criteria were found.")
+                            await channel.send("No nations found that match the criteria.")
+                            return
+    
                         logger.info(f"This will take {len(loom_nations)*(1/600)} hours.")
-
+    
                         foundables = []
-
+    
                         # Create tasks for each nation
-                        tasks = [
-                            self.check_nation_foundability(name) for name in loom_nations
-                        ]
-                        
+                        tasks = [self.check_nation_foundability(name) for name in loom_nations]
+    
                         # Run the tasks with asyncio.gather
                         results = await asyncio.gather(*tasks, return_exceptions=True)
-                        
+    
                         # Collect successful results
                         for i, (name, result) in enumerate(zip(loom_nations, results)):
                             logger.info(f"{i+1} of {len(loom_nations)} processed")
                             if isinstance(result, Exception):
-                                logger.error(f"Error for nation {name}: {result}")
+                                logger.error(f"Error for nation {name}: {result}", exc_info=True)
                             elif result:  # Nation is available
                                 foundables.append(name)
-                        
+    
                         # Write foundable nations to the file
                         file_path = os.path.join(tempfile.gettempdir(), "available_nations.txt")
                         async with aiofiles.open(file_path, "w") as file:
                             for name in foundables:
                                 await file.write(f"{name}\n")
-
+    
+                        # Send the file to Discord
                         try:
-                            await channel.send(file=discord.File("available_nations.txt"))
+                            await channel.send(file=discord.File(file_path))
                             await channel.send(f"{owner_id}")
                         finally:
-                            if os.path.exists("available_nations.txt"):
-                                os.remove("available_nations.txt")
-
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+    
                     else:
                         logger.error(f'Failed to fetch dump from NationStates with status {response.status}')
-    
+                        if channel:
+                            await channel.send("Failed to download the XML data. Please try again later.")
         except asyncio.CancelledError:
             logger.info("Task was cancelled.")
             raise
         except Exception as e:
-            logger.error(f'An error occurred: {e}')
-    
+            logger.error(f'An error occurred: {e}', exc_info=True)
+            if channel:
+                await channel.send("An error occurred while processing nations. Please check the logs.")
         finally:
-            # Clean up the temporary file
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
                 logger.info(f"Temporary file {temp_path} has been removed.")
