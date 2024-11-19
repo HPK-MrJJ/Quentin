@@ -42,10 +42,26 @@ class Name_Finder(commands.Cog):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers={'User-Agent': 'kakastania'}) as response:
-                    if response.status == 200:
-                        # Read and decompress response content
-                        with gzip.GzipFile(fileobj=BytesIO(await response.read())) as gzipped_file:
+                    if response.status != 200:
+                        logger.error(f"Unexpected status code: {response.status}")
+                        return
+            
+                    if response.headers.get('Content-Type') != 'application/gzip':
+                        logger.error(f"Unexpected content type: {response.headers.get('Content-Type')}")
+                        return
+            
+                    response_data = await response.read()
+                    if response_data.startswith(b'<!'):
+                        logger.error("Response appears to be HTML, possibly an error page.")
+                        logger.error(response_data[:200].decode('utf-8', errors='ignore'))  # Log the first 200 characters
+                        return
+            
+                    try:
+                        with gzip.GzipFile(fileobj=BytesIO(response_data)) as gzipped_file:
                             xml_text = gzipped_file.read()
+                    except OSError:
+                        logger.error("Response content is not a valid Gzip file.")
+                        return
     
                         # Parse XML content
                         root = ET.fromstring(xml_text)
