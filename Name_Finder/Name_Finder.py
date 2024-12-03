@@ -47,7 +47,9 @@ class Name_Finder(commands.Cog):
                         return
             
                     if response.headers.get('Content-Type') != 'application/gzip':
-                        logger.error(f"Unexpected content type: {response.headers.get('Content-Type')}")
+                        logger.error(f"Unexpected content type for url {url}: {response.headers.get('Content-Type')}")
+                        logger.info(f"Response status: {response.status}")
+                        logger.debug(f"Response content: {await response.text()}")
                         return
             
                     response_data = await response.read()
