@@ -150,8 +150,7 @@ class Name_Finder(commands.Cog):
                 
                 if channel:
                     if owner_id != 0:
-                        date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-                        url = f'https://www.nationstates.net/archive/nations/{date}-nations-xml.gz'
+                        url = f'https://www.nationstates.net/pages/nations.xml.gz'
                         try:
                             await self.download_and_process_xml(guild, channel, url)
                         except Exception as e:
