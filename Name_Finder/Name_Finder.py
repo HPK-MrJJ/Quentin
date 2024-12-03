@@ -41,7 +41,7 @@ class Name_Finder(commands.Cog):
     
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers={'User-Agent': 'kakastania'}) as response:
+                async with session.get(url, headers={'User-Agent': 'kakastania'}, allow_redirects=True) as response:
                     if response.status != 200:
                         logger.error(f"Unexpected status code: {response.status}")
                         return
