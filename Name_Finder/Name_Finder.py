@@ -46,7 +46,7 @@ class Name_Finder(commands.Cog):
                         logger.error(f"Unexpected status code: {response.status}")
                         return
             
-                    if response.headers.get('Content-Type') != 'application/gzip':
+                    if response.headers.get('Content-Type') != 'x-gzip':
                         logger.error(f"Unexpected content type for url {url}: {response.headers.get('Content-Type')}")
                         logger.info(f"Response status: {response.status}")
                         logger.debug(f"Response content: {await response.text()}")
@@ -138,8 +138,8 @@ class Name_Finder(commands.Cog):
                 os.remove(temp_path)
                 logger.info(f"Temporary file {temp_path} has been removed.")
 
-    @tasks.loop(time=time(hour=6))
-    # @tasks.loop(hours=3)
+    # @tasks.loop(time=time(hour=6))
+    @tasks.loop(hours=3)
     async def send_daily_message(self):
         """Loop task to send a daily message."""
         try:
