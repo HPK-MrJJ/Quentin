@@ -2,12 +2,11 @@ import os
 import numpy as np
 import random
 import asyncio
-from datetime, import datetime, timedelta
+from datetime import datetime, timedelta
 
 import re
 import cv2
 import pandas as pd
-import asychio
 import aiohttp
 import aiofiles
 import discord
@@ -28,7 +27,6 @@ class Quests(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69312578, force_registration=True)
         self.config.register_guild(
-            next_quest_time=18,
             quests_channel_id=None,
             quests_role_id=None,
             quest_count=0,
@@ -105,7 +103,7 @@ class Quests(commands.Cog):
                 if status_values[0] == 'DOWN' or status_values[1] == 'DOWN':
                     print("One or more of the APIs is down, this may take a while/not work")
 
-                    await self.enter_long_term_wait(self, channel_id = await self.congfig.guild(guild).quests_channel_id())
+                    await self.enter_long_term_wait(self, channel_id = await self.config.guild(guild).quests_channel_id())
                 
                 print(f"Retry {retry_count}/{max_retries} after error: {e}")
                 await asyncio.sleep(delay)  # Exponential backoff
@@ -176,7 +174,7 @@ class Quests(commands.Cog):
     @score_quests.before_loop
     async def before_score_quest(self):
         await self.bot.wait_until_ready()
-        await asynchio.sleep(86400)
+        await asyncio.sleep(86400)
 
     async def enter_long_term_wait(self, channel_id):
         channel = self.bot.get_channel(channel_id)
@@ -655,7 +653,7 @@ class Quests(commands.Cog):
             
         score_log = await self.config.guild(guild).score_log()
         score_log.append(f"Added {dkp} points for {faction} from {message.author}.")
-        await self.config.guils(guild).score_log.set(score_log)
+        await self.config.guild(guild).score_log.set(score_log)
         
     @is_owner_overridable()
     @commands.command()
