@@ -97,7 +97,7 @@ class Quests(commands.Cog):
 
                             # Extract the text from each td element
                             status_values = [td.get_text(strip=True) for td in td_elements]
-                except Exception e:
+                except Exception as e:
                     print("Damn even the front end is down")
 
                 if status_values[0] == 'DOWN' or status_values[1] == 'DOWN':
@@ -127,8 +127,8 @@ class Quests(commands.Cog):
                             duple = await self.write_quest()
                             message = duple[1]
                             await channel.send(f"<@&{role_id}>\n{message}")
-                            await self.config.guild(ctx.guild).quests_count.set(quest_count+1)
-                            await self.config.guild(ctx.guild).current_quest.set(duple[0])
+                            await self.config.guild(guild).quests_count.set(quest_count+1)
+                            await self.config.guild(guild).current_quest.set(duple[0])
                         else:
                             print("Please set the quests role id.")
                     else:
@@ -218,13 +218,13 @@ class Quests(commands.Cog):
         current_quest = await self.config.guild(guild).current_quest()
         async for message in channel.history(after=last_quest):
             if self.scored(guild, message, str(current_quest)): # the scored method scores the message and returns true if it scored, otherwise false
-                await self.bot.add_reaction(message, :white_check_mark:)
+                await self.bot.add_reaction(message, "✅")
             else:
-                await self.bot.add_reaction(message, :x:)
+                await self.bot.add_reaction(message, "❌")
 
-    async def scored(guild, message: discord.Message, quest_name: str):
+    async def scored(self, guild, message: discord.Message, quest_name: str):
         """direct the program to the right method to score the quest of the day"""
-        quest_name = lower(quest_name)
+        quest_name = quest_name.lower()
         if quest_name == '2048':
             return self.number_game_score(guild, message)
         elif quest_name == 'worldle':
@@ -258,7 +258,7 @@ class Quests(commands.Cog):
         if len(attachments) != 1:
             return False
         image = attachments[0]
-        image_contents = self.ocr(guild, image.url)
+        image_contents = await self.ocr(guild, image.url)
         
         pattern = r'SCORE\r\n([0-9]+)'
         match = re.search(pattern, text)
@@ -272,7 +272,7 @@ class Quests(commands.Cog):
             else:
                 dkp = 10
 
-            truth = await find_faction(dkp, guild)
+            truth = await find_faction(dkp, guild, message)
                 
             return truth
                 
@@ -314,7 +314,7 @@ class Quests(commands.Cog):
             if ':cityscapes:' in contents:
                 dkp += 1
                 
-            truth = await find_faction(dkp, guild)
+            truth = await find_faction(dkp, guild, message)
                 
             return truth
                 
@@ -338,7 +338,7 @@ class Quests(commands.Cog):
             else:
                 dkp = 1
 
-            truth = await find_faction(dkp, guild)
+            truth = await find_faction(dkp, guild, message)
                 
             return truth
                 
@@ -351,7 +351,7 @@ class Quests(commands.Cog):
         if len(attachments) != 1:
             return False
         image = attachments[0]
-        image_contents = self.ocr(guild, image.url)
+        image_contents = await self.ocr(guild, image.url)
 
         pattern = r'HI\s[a-zA-Z0-9]{5}\s([a-zA-Z0-9]{5})'
         match = re.search(pattern, text)
@@ -386,7 +386,7 @@ class Quests(commands.Cog):
                     else:
                         dkp = 20
                         
-            truth = await find_faction(dkp, guild)
+            truth = await find_faction(dkp, guild, message)
                 
             return truth
         
@@ -399,7 +399,7 @@ class Quests(commands.Cog):
         if len(attachments) != 1:
             return False
         image = attachments[0]
-        image_contents = self.ocr(guild, image.url)
+        image_contents = await self.ocr(guild, image.url)
 
         pattern = r'000.*?(\d+)m'
         match = re.search(pattern, image_contents)
@@ -414,7 +414,7 @@ class Quests(commands.Cog):
             else:
                 dkp = 3
 
-            truth = await find_faction(dkp, guild)
+            truth = await find_faction(dkp, guild, message)
                 
             return truth
         
@@ -427,7 +427,7 @@ class Quests(commands.Cog):
         if len(attachments) != 1:
             return False
         image = attachments[0]
-        image_contents = self.ocr(guild, image.url)
+        image_contents = await self.ocr(guild, image.url)
 
         pattern = r"\b\d+\b"
         match = re.search(pattern, text)
@@ -442,7 +442,7 @@ class Quests(commands.Cog):
             else:
                 dkp = 5
 
-            truth = await find_faction(dkp, guild)
+            truth = await find_faction(dkp, guild, message)
                 
             return truth
         
@@ -469,7 +469,7 @@ class Quests(commands.Cog):
         else:
             return False
 
-        truth = await find_faction(dkp, guild)
+        truth = await find_faction(dkp, guild, message)
 
         return truth
 
@@ -495,7 +495,7 @@ class Quests(commands.Cog):
         else:
             dkp = 3
 
-        truth = await find_faction(dkp, guild)
+        truth = await find_faction(dkp, guild, message)
 
         return truth
 
@@ -520,7 +520,7 @@ class Quests(commands.Cog):
             else:
                 return False
 
-        truth = await find_faction(dkp,guild)
+        truth = await find_faction(dkp, guild, message)
 
         return truth
 
@@ -530,14 +530,14 @@ class Quests(commands.Cog):
         if len(attachments) != 1:
             return False
         image = attachments[0]
-        image_contents = self.ocr(guild, image.url)
+        image_contents = await self.ocr(guild, image.url)
 
         pattern = r'\r\n(\d+(?:,\d+)*)\r\n'
 
         match = re.search(pattern, image_contents)
 
         if match:
-            score = int("".join(match.split(","))
+            score = int("".join(match.group(1).split(",")))
             if score > 50000:
                 dkp = 20
             elif score > 20000:
@@ -547,7 +547,7 @@ class Quests(commands.Cog):
         else:
             return False
 
-        truth = await find_faction(dkp,guild)
+        truth = await find_faction(dkp, guild, message)
 
         return truth
 
@@ -602,13 +602,13 @@ class Quests(commands.Cog):
         else:
             dkp = 1
 
-        truth = await find_faction(dkp,guild)
+        truth = await find_faction(dkp, guild, message)
 
         return truth
         
     # bandle_score    
 
-    async def find_faction(dkp, guild):
+    async def find_faction(dkp, guild, message):
         
         f = await self.config.guild(guild).ferelden()
         a = await self.config.guild(guild).anderfels()
