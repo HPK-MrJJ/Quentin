@@ -192,7 +192,7 @@ class Quests(commands.Cog):
 
                             # Extract the text from each td element
                             status_values = [td.get_text(strip=True) for td in td_elements]
-            except Exception e:
+            except Exception as e:
                 print("Damn even the front end is down")
             if status_values[0] == 'UP' and status_values[1] == 'UP':
                 up = True
