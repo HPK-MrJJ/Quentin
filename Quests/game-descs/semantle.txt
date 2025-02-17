@@ -1,0 +1,14 @@
+Welcome to hell.
+
+Also known as Semantle, a game where you guess a daily word based off of how close your guesses are to that daily word in meaning.
+
+It is a grueling effort, at least for me and most normal people i've talked to, but DKP will be awarded accordingly.
+
+Here is the link - https://semantle.com/
+
+3 DKP for playing (you can't give up though because then it doesnt give you anything 
+7 DKP for getting the word
+15 DKP for getting the word in less than fifty tries
+20 DKP for getting it in less than thirty tries (this is possible - at the time these instructions were written, the bot creator had just gotten the word in 21 guesses. :eyes:)
+
+Post your :sob: and score in #return-quest

@@ -1,0 +1,11 @@
+Connections is a grouping game, where you are given 16 words, each corresponding to one of four categories. The categories will always be more specific than something general, like names, verbs, or 5-letter words. The categories are of different difficulties, and have different colors to boot. Select four words and hit submit. If you are correct, it'll be moved to the top and the category will be revealed. Otherwise, it counts as a mistake. If you make 4 mistakes, you lose the game. It resets every day.
+
+Submit today's Connections game in the next 24 hours in ⁠⁠#return-quest by using the share button that pops up at the end of the game. It'll give you a colored square breakdown not unlike Wordle.
+
+3 DKP for finishing the game
+5 DKP for successfully figuring out which words go in which category in 8 or 7 guesses (correct guesses included)
+10 DKP for doing so in 6 guesses or less (correct guesses included)
+
+https://www.nytimes.com/games/connections
+
+Good luck! 

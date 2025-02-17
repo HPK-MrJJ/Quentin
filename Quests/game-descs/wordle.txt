@@ -1,0 +1,11 @@
+OMG OMG OMG It's Wordle Wednesday for all the vocabularily inclined gamers out there!
+
+Wordle is a word-guessing game where you aim to guess a 5 letter word in 6 or less tries based off a series of colored hints given from a previous guess. If you guess a starting word, a grey letter means it's not on the goal word, yellow means it's there, but in the wrong order/slot and green means it's in the word  and in the correct order/slot. Wordle resets at midnight in your timezone; so you get one of these puzzles every day.
+
+Submit your daily Wordle in the next 24 hours in ⁠#return-quest by using the share button at the end of the game. It will give you a colored square breakdown of how you played.
+
+3 DKP for playing
+5 DKP for guessing the word
+10 DKP for guessing the word in under 3 tries
+
+https://www.nytimes.com/games/wordle/index.html
