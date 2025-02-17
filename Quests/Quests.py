@@ -31,7 +31,7 @@ class Quests(commands.Cog):
             quests_role_id=None,
             quest_count=0,
             current_quest=None,
-            api_key=None
+            api_key=None,
             ferelden=discord.utils.get(ctx.guild.roles, name='Ferelden'),
             anderfels=discord.utils.get(ctx.guild.roles, name='Anderfels'),
             nevarra=discord.utils.get(ctx.guild.roles, name='Nevarra'),
