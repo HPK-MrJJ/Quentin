@@ -1,6 +1,0 @@
-curl -X POST "https://api.ocr.space/parse/image" ^
-     --data-urlencode "apikey=K85862544388957" ^
-     --data-urlencode "url=https://media.discordapp.net/attachments/810949605138628720/1271354640721514506/image.png?ex=67ae3a06&is=67ace886&hm=8be39233e1544bd3c958be5fa7407437efb14b37033147d692512273121a841b&=&format=webp&quality=lossless&width=1191&height=670" ^
-     --data-urlencode "language=eng" ^
-     --data-urlencode "isOverlayRequired=false" ^
-     --data-urlencode "filetype=png"
