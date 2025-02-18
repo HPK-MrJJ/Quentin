@@ -604,9 +604,7 @@ class Quests(commands.Cog):
 
         truth = await find_faction(dkp, guild, message)
 
-        return truth
-        
-    # bandle_score    
+        return truth 
 
     async def find_faction(dkp, guild, message):
         
