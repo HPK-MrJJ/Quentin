@@ -23,20 +23,22 @@ def is_owner_overridable():
     
 class Quests(commands.Cog):
 
-    def __init__(self, ctx, bot):
+    def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69312578, force_registration=True)
+
+        # Register config with role IDs instead of role objects
         self.config.register_guild(
             quests_channel_id=None,
             quests_role_id=None,
             quest_count=0,
             current_quest=None,
             api_key=None,
-            ferelden=discord.utils.get(ctx.guild.roles, name='Ferelden'),
-            anderfels=discord.utils.get(ctx.guild.roles, name='Anderfels'),
-            nevarra=discord.utils.get(ctx.guild.roles, name='Nevarra'),
-            orlais=discord.utils.get(ctx.guild.roles, name='Orlais'),
-            tevinter=discord.utils.get(ctx.guild.roles, name='Tevinter'),
+            ferelden_role_id=None,
+            anderfels_role_id=None,
+            nevarra_role_id=None,
+            orlais_role_id=None,
+            tevinter_role_id=None,
             ferelden_score=0,
             anderfels_score=0,
             nevarra_score=0,
@@ -44,6 +46,27 @@ class Quests(commands.Cog):
             tevinter_score=0,
             score_log=[]
         )
+
+    async def setup_guild_roles(self, guild):
+        """Fetch and store role IDs after the bot is ready."""
+        ferelden = discord.utils.get(guild.roles, name='Ferelden')
+        anderfels = discord.utils.get(guild.roles, name='Anderfels')
+        nevarra = discord.utils.get(guild.roles, name='Nevarra')
+        orlais = discord.utils.get(guild.roles, name='Orlais')
+        tevinter = discord.utils.get(guild.roles, name='Tevinter')
+
+        # Store role IDs instead of role objects
+        await self.config.guild(guild).ferelden_role_id.set(ferelden.id if ferelden else None)
+        await self.config.guild(guild).anderfels_role_id.set(anderfels.id if anderfels else None)
+        await self.config.guild(guild).nevarra_role_id.set(nevarra.id if nevarra else None)
+        await self.config.guild(guild).orlais_role_id.set(orlais.id if orlais else None)
+        await self.config.guild(guild).tevinter_role_id.set(tevinter.id if tevinter else None)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Run role setup when bot is ready."""
+        for guild in self.bot.guilds:
+            await self.setup_guild_roles(guild)
         self.send_daily_message.start()
 
     def cog_unload(self):
