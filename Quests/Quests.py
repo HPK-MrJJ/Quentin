@@ -171,11 +171,6 @@ class Quests(commands.Cog):
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready() 
 
-    @score_quests.before_loop
-    async def before_score_quest(self):
-        await self.bot.wait_until_ready()
-        await asyncio.sleep(86400)
-
     async def enter_long_term_wait(self, channel_id):
         channel = self.bot.get_channel(channel_id)
         channel.send("Hi there. The OCR API is currently down or experiencing super high latency. It might be a while before I can score these. I'll check every five minutes to see if it is back, and let you know when it comes back.")
@@ -210,6 +205,11 @@ class Quests(commands.Cog):
             channel_id = await self.config.guild(guild).quests_channel_id()
             if count > 0:
                 self.fetch_messages(channel_id, guild)
+
+    @score_quests.before_loop
+    async def before_score_quest(self):
+        await self.bot.wait_until_ready()
+        await asyncio.sleep(86400)
 
     async def fetch_messages(self, channel_id, guild):
         """get the messages that need scoring and send them to the scoring method"""
