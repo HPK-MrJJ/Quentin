@@ -23,7 +23,7 @@ def is_owner_overridable():
     
 class Quests(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, ctx, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69312578, force_registration=True)
         self.config.register_guild(
