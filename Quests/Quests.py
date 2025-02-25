@@ -68,6 +68,7 @@ class Quests(commands.Cog):
         for guild in self.bot.guilds:
             await self.setup_guild_roles(guild)
         self.send_daily_message.start()
+        self.score_quests.start()
 
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
