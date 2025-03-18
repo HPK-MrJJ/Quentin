@@ -621,52 +621,21 @@ class Quests(commands.Cog):
 
         return truth 
 
-    async def find_faction(dkp, guild, message):
-        
-        f = await self.config.guild(guild).ferelden()
-        a = await self.config.guild(guild).anderfels()
-        n = await self.config.guild(guild).nevarra()
-        o = await self.config.guild(guild).orlais()
-        t = await self.config.guild(guild).tevinder()
-    
-        if f in message.author.roles:
-            await self.count_score('ferelden', dkp, guild)
-            return True
-        elif a in message.author.roles:
-            await self.count_score('anderfels', dkp, guild)
-            return True
-        elif n in message.author.roles:
-            await self.count_score('nevarra', dkp, guild)
-            return True
-        elif o in message.author.roles:
-            await self.count_score('orlais', dkp, guild)
-            return True
-        elif t in message.author.roles:
-            await self.count_score('tevinder', dkp, guild)
+    async def find_faction(self, dkp, guild, message):
+        roles = await self.config.guild(guild).faction_roles()
+        scores = await self.config.guild(guild).faction_scores()
+        user_role = None
+        for role in roles.values():
+            if role in message.author.roles:
+                user_role = role
+                break
+
+        if user_role:
+            original_score = scores[user_role.name]
+            await self.config.guild(guild).faction_scores.set(scores.update(user_role.name: original_score+dkp))
             return True
         else:
             return False
-    
-    async def count_score(faction, score, guild):
-        if faction == 'ferelden':
-            faction_score = await self.config.guild(guild).ferelden_score()
-            await self.config.guild(guild).ferelden_score.set(faction_score + dkp)
-        elif faction == 'anderfels':
-            faction_score = await self.config.guild(guild).anderfels_score()
-            await self.config.guild(guild).anderfels_score.set(faction_score + dkp)
-        elif faction == 'nevarra':
-            faction_score = await self.config.guild(guild).nevarra_score()
-            await self.config.guild(guild).nevarra_score.set(faction_score + dkp)
-        elif faction == 'orlais':
-            faction_score = await self.config.guild(guild).orlais_score()
-            await self.config.guild(guild).orlais_score.set(faction_score + dkp)
-        elif faction == 'tevinder':
-            faction_score = await self.config.guild(guild).tevinder_score()
-            await self.config.guild(guild).tevinder_score.set(faction_score + dkp)
-            
-        score_log = await self.config.guild(guild).score_log()
-        score_log.append(f"Added {dkp} points for {faction} from {message.author}.")
-        await self.config.guild(guild).score_log.set(score_log)
         
     @is_owner_overridable()
     @commands.command()
@@ -693,8 +662,10 @@ class Quests(commands.Cog):
     @commands.command()
     async def create_faction(self, ctx, role: discord.Role):
         roles = await self.config.guild(ctx.guild).faction_roles()
+        scores = await self.config.guild(ctx.guild).faction_scores()
         if role.name not in roles:
             await self.config.guild(ctx.guild).faction_roles.set(roles.update({f"{role.name}": role}))
+            await self.config.guild(ctx.guild).faction_scores.set(scores.update({f"{role.name}": 0}))
             await ctx.send("Faction added. Here's the ones I have:")
             for n,r in roles:
                 await ctx.send(f"{n}: {r.mention}")
