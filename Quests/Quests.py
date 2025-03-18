@@ -311,23 +311,23 @@ class Quests(commands.Cog):
             else:
                 dkp = 2
 
-            if ':compass:' in contents:
+            if '🧭' in contents:
                 dkp += 1
-            if ':star:' in contents:
+            if '⭐' in contents:
                 dkp += 1
-            if ':triangular_flag_on_post:' in contents:
+            if '🚩' in contents:
                 dkp += 1
-            if ':abc:' in contents:
+            if '🔤' in contents:
                 dkp += 1
-            if ':couple:' in contents:
+            if '👫' in contents:
                 dkp += 1
-            if ':coin:' in contents:
+            if '🪙' in contents:
                 dkp += 1
-            if ':speaking_head:' in contents:
+            if '🗣️' in contents:
                 dkp += 1
-            if ':triangular_ruler:' in contents:
+            if '📐' in contents:
                 dkp += 1
-            if ':cityscapes:' in contents:
+            if '🏙️' in contents:
                 dkp += 1
                 
             truth = await find_faction(dkp, guild, message)
@@ -492,8 +492,7 @@ class Quests(commands.Cog):
     async def connections_score(self, guild: discord.Guild, message: discord.Message):
         content = message.content
 
-        wins = [":green_square::green_square::green_square::green_square:",":yellow_square::yellow_square::yellow_square::yellow_square",""":purple_square::purple_square:
-                    :purple_square::purple_square:""", ":blue_square::blue_square::blue_square::blue_square:"]
+        wins = ["🟩🟩🟩🟩","🟨🟨🟨🟨","""🟪🟪 🟪🟪""", "🟦🟦🟦🟦"]
 
         num_wins = 0
 
