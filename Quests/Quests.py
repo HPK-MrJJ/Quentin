@@ -34,16 +34,8 @@ class Quests(commands.Cog):
             quest_count=0,
             current_quest=None,
             api_key=None,
-            ferelden_role_id=None,
-            anderfels_role_id=None,
-            nevarra_role_id=None,
-            orlais_role_id=None,
-            tevinter_role_id=None,
-            ferelden_score=0,
-            anderfels_score=0,
-            nevarra_score=0,
-            orlais_score=0,
-            tevinter_score=0,
+            faction_roles={},
+            faction_scores={},
             score_log=[]
         )
 
@@ -679,24 +671,38 @@ class Quests(commands.Cog):
         
     @is_owner_overridable()
     @commands.command()
-    async def set_quest_channel_id(self, ctx, id: int):
+    async def set_quest_channel_id(self, ctx, channel: discord.TextChannel):
         """Set the channel ID for daily quests."""
-        await self.config.guild(ctx.guild).quests_channel_id.set(id)  
-        await ctx.send(f"Quests channel set.")
-
+        await self.config.guild(ctx.guild).quests_channel_id.set(channel.id)  
+        await ctx.send(f"Quests channel set to {channel.mention}")
+    
     @is_owner_overridable()
     @commands.command()
-    async def set_role_id(self, ctx, id: str):
+    async def set_role_id(self, ctx, role: discord.Role):
         """Set the role ID for daily messages."""
-        await self.config.guild(ctx.guild).quests_role_id.set(id) 
-        await ctx.send(f"Quests role ID set.")
-
+        await self.config.guild(ctx.guild).quests_role_id.set(role.id) 
+        await ctx.send(f"Quests role ID set to {role.mention}.")
+    
     @is_owner_overridable()
     @commands.command()
     async def set_key(self, ctx, key: str):
         """Set the api key for the OCR API."""
         await self.config.guild(ctx.guild).api_key.set(key)
         await ctx.send("API Key set.")
+    
+    @is_owner_overridable()
+    @commands.command()
+    async def create_faction(self, ctx, role: discord.Role):
+        roles = await self.config.guild(ctx.guild).faction_roles()
+        if role.name not in roles:
+            await self.config.guild(ctx.guild).faction_roles.set(roles.update({f"{role.name}": role}))
+            await ctx.send("Faction added. Here's the ones I have:")
+            for n,r in roles:
+                await ctx.send(f"{n}: {r.mention}")
+        else:
+            await ctx.send("I already have a faction by that name. Here's the ones I have:")
+            for n,r in roles:
+                await ctx.send(f"{n}: {r.mention}")
 
     @commands.Cog.listener()
     async def on_message(self, message):
