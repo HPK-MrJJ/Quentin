@@ -492,7 +492,7 @@ class Quests(commands.Cog):
     async def connections_score(self, guild: discord.Guild, message: discord.Message):
         content = message.content
 
-        wins = ["🟩🟩🟩🟩","🟨🟨🟨🟨","""🟪🟪 🟪🟪""", "🟦🟦🟦🟦"]
+        wins = ["🟩🟩🟩🟩","🟨🟨🟨🟨","🟪🟪🟪🟪", "🟦🟦🟦🟦"]
 
         num_wins = 0
 
