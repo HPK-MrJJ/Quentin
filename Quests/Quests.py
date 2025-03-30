@@ -662,13 +662,13 @@ class Quests(commands.Cog):
         roles = await self.config.guild(ctx.guild).faction_roles()
         scores = await self.config.guild(ctx.guild).faction_scores()
 
-    if role.id not in roles:
-        # Store the role name, not just role ID, to later access it
-        await self.config.guild(ctx.guild).faction_roles.set(roles | {role.id: {'name': role.name}})
-        await self.config.guild(ctx.guild).faction_scores.set(scores | {role.id: 0})
-        await ctx.send("Faction added. Here's the ones I have:")
-    else:
-        await ctx.send("I already have a faction by that name. Here's the ones I have:")
+        if role.id not in roles:
+            # Store the role name, not just role ID, to later access it
+            await self.config.guild(ctx.guild).faction_roles.set(roles | {role.id: {'name': role.name}})
+            await self.config.guild(ctx.guild).faction_scores.set(scores | {role.id: 0})
+            await ctx.send("Faction added. Here's the ones I have:")
+        else:
+            await ctx.send("I already have a faction by that name. Here's the ones I have:")
 
     # Fetch roles properly and send list
     updated_roles = await self.config.guild(ctx.guild).faction_roles()
