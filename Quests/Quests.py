@@ -36,7 +36,6 @@ class Quests(commands.Cog):
             api_key=None,
             faction_roles={},
             faction_scores={},
-            score_log=[]
         )
 
     async def setup_guild_roles(self, guild):
@@ -216,7 +215,6 @@ class Quests(commands.Cog):
     async def score_quests(self):
         """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
-            self.config.guild(guild).score_log.set([]) # clear the score log before starting each scoring cycle
             count = await self.config.guild(guild).quest_count()
             channel_id = await self.config.guild(guild).quests_channel_id()
             if count > 0:
