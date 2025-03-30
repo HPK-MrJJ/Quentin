@@ -637,15 +637,15 @@ class Quests(commands.Cog):
         
     @is_owner_overridable()
     @commands.command()
-    async def set_quest_channel_id(self, ctx, channel: discord.TextChannel):
-        """Set the channel ID for daily quests."""
+    async def set_quest_channel(self, ctx, channel: discord.TextChannel):
+        """Set the channel for daily quests."""
         await self.config.guild(ctx.guild).quests_channel_id.set(channel.id)  
         await ctx.send(f"Quests channel set to {channel.mention}")
     
     @is_owner_overridable()
     @commands.command()
-    async def set_role_id(self, ctx, role: discord.Role):
-        """Set the role ID for daily messages."""
+    async def set_role(self, ctx, role: discord.Role):
+        """Set the role for daily messages."""
         await self.config.guild(ctx.guild).quests_role_id.set(role.id) 
         await ctx.send(f"Quests role ID set to {role.mention}.")
     
