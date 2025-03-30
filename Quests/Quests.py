@@ -670,15 +670,16 @@ class Quests(commands.Cog):
         else:
             await ctx.send("I already have a faction by that name. Here's the ones I have:")
 
-    # Fetch roles properly and send list
-    updated_roles = await self.config.guild(ctx.guild).faction_roles()
-    for role_id, role_info in updated_roles.items():
-        role_name = role_info['name']  # Get the role name from the stored data
-        role_obj = ctx.guild.get_role(role_id)
-        if role_obj:
-            await ctx.send(f"{role_name}: {role_obj.mention}")
-        else:
-            await ctx.send(f"{role_name}: (Role not found)")
+        # Fetch roles properly and send list
+        updated_roles = await self.config.guild(ctx.guild).faction_roles()
+        
+        for role_id, role_info in updated_roles.items():
+            role_name = role_info['name']  # Get the role name from the stored data
+            role_obj = ctx.guild.get_role(role_id)
+            if role_obj:
+                await ctx.send(f"{role_name}: {role_obj.mention}")
+            else:
+                await ctx.send(f"{role_name}: (Role not found)")
 
     @is_owner_overridable()
     @commands.command()
