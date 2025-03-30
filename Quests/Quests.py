@@ -630,7 +630,7 @@ class Quests(commands.Cog):
 
         if user_role:
             original_score = scores[user_role.name]
-            await self.config.guild(guild).faction_scores.set(scores.update(f"{user_role.name]": f"{original_score+dkp}"))
+            await self.config.guild(guild).faction_scores.set(scores.update(f"{user_role.name}": f"{original_score+dkp}"))
             return True
         else:
             return False
