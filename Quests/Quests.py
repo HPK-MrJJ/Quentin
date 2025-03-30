@@ -662,8 +662,8 @@ class Quests(commands.Cog):
         roles = await self.config.guild(ctx.guild).faction_roles()
         scores = await self.config.guild(ctx.guild).faction_scores()
         if role.name not in roles:
-            await self.config.guild(ctx.guild).faction_roles.set(roles.update({f"{role.name}": role}))
-            await self.config.guild(ctx.guild).faction_scores.set(scores.update({f"{role.name}": 0}))
+            await self.config.guild(ctx.guild).faction_roles.set(roles | {role.name: role})
+            await self.config.guild(ctx.guild).faction_scores.set(scores | {role.name: 0})
             await ctx.send("Faction added. Here's the ones I have:")
             for n,r in roles:
                 await ctx.send(f"{n}: {r.mention}")
