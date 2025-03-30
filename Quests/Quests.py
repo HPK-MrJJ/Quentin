@@ -661,20 +661,26 @@ class Quests(commands.Cog):
     async def create_faction(self, ctx, role: discord.Role):
         roles = await self.config.guild(ctx.guild).faction_roles()
         scores = await self.config.guild(ctx.guild).faction_scores()
-
+    
         if role.id not in roles:
-            # Store the role name, not just role ID, to later access it
-            await self.config.guild(ctx.guild).faction_roles.set(roles | {role.id: {'name': role.name}})
-            await self.config.guild(ctx.guild).faction_scores.set(scores | {role.id: 0})
+            # Add the new faction to the roles dictionary and assign it the role name
+            roles[role.id] = {'name': role.name}
+    
+            # Set the faction's score to 0 in the scores dictionary
+            scores[role.id] = 0
+    
+            # Save the updated dictionaries back to the config
+            await self.config.guild(ctx.guild).faction_roles.set(roles)
+            await self.config.guild(ctx.guild).faction_scores.set(scores)
+    
             await ctx.send("Faction added. Here's the ones I have:")
         else:
             await ctx.send("I already have a faction by that name. Here's the ones I have:")
-
-        # Fetch roles properly and send list
+    
+        # Fetch the updated roles and send the list
         updated_roles = await self.config.guild(ctx.guild).faction_roles()
-        
         for role_id, role_info in updated_roles.items():
-            role_name = role_info['name']  # Get the role name from the stored data
+            role_name = role_info['name']  # Access the role name from the stored dictionary
             role_obj = ctx.guild.get_role(role_id)
             if role_obj:
                 await ctx.send(f"{role_name}: {role_obj.mention}")
