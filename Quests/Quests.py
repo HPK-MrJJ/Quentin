@@ -9,6 +9,10 @@ import cv2
 import pandas as pd
 import aiohttp
 import aiofiles
+import tempfile
+
+import aiopytesseract
+
 import discord
 from discord.ext import tasks
 
@@ -63,8 +67,20 @@ class Quests(commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    async def ocr(self, guild, url):
-       # rewrite with tesseract
+    async def ocr(url):
+       suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_path = temp_file.name
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                resp.raise_for_status()
+                async with aiofiles.open(temp_path, 'wb') as f:
+                    await f.write(await resp.read())
+
+        text = await aiopytesseract.image_to_string(temp_path)
+        os.remove(temp_path)
+        return text
 
     @tasks.loop(hours=25)
     # @tasks.loop(minutes=1)
@@ -187,7 +203,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
         
-        pattern = r'SCORE\r\n([0-9]+)'
+        pattern = r'2048 (\d+)\|'
         match = re.search(pattern, text)
     
         if match:
@@ -280,41 +296,14 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r'HI\s[a-zA-Z0-9]{5}\s([a-zA-Z0-9]{5})'
+        pattern = r'HI (\d+) '
         match = re.search(pattern, text)
 
         if match:
             score_raw = match.group(1)
-            if score_raw.isdigit():
-                true_score = int(score_raw)
-            else:
-                if (score_raw[0] == '0' and score_raw[1] == '0') or ((score_raw[0] == 'o' or score_raw[0] == 'O') and (score_raw[1] == 'o' or score_raw[1] == 'O')) :
-                    if score_raw[2].isdigit():
-                        if int(score-raw[2]) >= 5:
-                            dkp = 10
-                        else:
-                            dkp = 5
-                    elif score_raw[2] == 'S' or score_raw[2] == 's':
-                        dkp = 10
-                    else:
-                        dkp = 5
-                elif score_raw[1].isdigit():
-                    if int(score_raw[1]) > 2:
-                        dkp = 20
-                    elif int(score_raw[1]) < 2:
-                        dkp = 10
-                    elif int(score_raw[1]) == 2 and (int(score-raw[2]) >= 5 or (score_raw[2] == 'S' or score_raw[2] == 's')) :
-                        dkp = 20
-                    else:
-                        dkp = 10
-                else:
-                    if score_raw[1] == 'l' or score_raw[1] == 'I':
-                        dkp = 10
-                    else:
-                        dkp = 20
-                        
+            
             truth = await find_faction(dkp, guild, message)
-                
+            
             return truth
         
         else:
@@ -328,7 +317,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r'000.*?(\d+)m'
+        pattern = r'(\d+)m'
         match = re.search(pattern, image_contents)
 
         if match:
@@ -356,7 +345,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r"\b\d+\b"
+        pattern = r'was (\d+)'
         match = re.search(pattern, text)
 
         if match:
@@ -458,7 +447,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r'\r\n(\d+(?:,\d+)*)\r\n'
+        pattern = r'FINAL SCORE\n([\d,]+)'
 
         match = re.search(pattern, image_contents)
 
