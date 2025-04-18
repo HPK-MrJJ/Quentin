@@ -65,7 +65,7 @@ class Quests(commands.Cog):
         self.score_quests.start()
 
     def cog_unload(self):
-        self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
+        self.start_daily_message_task.cancel()  # Stop the task if the cog is unloaded
 
     async def ocr(url):
        suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
@@ -84,7 +84,10 @@ class Quests(commands.Cog):
 
     @tasks.loop(hours=25)
     # @tasks.loop(minutes=1)
-    async def send_daily_message(self):
+    async def start_daily_message_task(self):
+        self.daily_message_task()
+    
+    async def daily_message_task(self):
         print("Executing quest task")
         try:
             for guild in self.bot.guilds:  
@@ -136,11 +139,14 @@ class Quests(commands.Cog):
     
         return [game, quest]
         
-    @send_daily_message.before_loop
-    async def before_send_daily_message(self):
+    @send_daily_message_task.before_loop
+    async def before_send_daily_message_task(self):
         await self.bot.wait_until_ready() 
 
     @tasks.loop(hours=25)
+    async def score_quests_task(self):
+        self.score_quests()
+
     async def score_quests(self):
         """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
@@ -149,8 +155,8 @@ class Quests(commands.Cog):
             if count > 0:
                 self.fetch_messages(channel_id, guild)
 
-    @score_quests.before_loop
-    async def before_score_quest(self):
+    @score_quests_task.before_loop
+    async def before_score_quest_task(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(86400)
 
@@ -614,6 +620,13 @@ class Quests(commands.Cog):
         else:
             await ctx.send("Faction not found.")
 
+    @is_owner_overridable()
+    @commands.command()
+    async def go_score(self, ctx):
+        self.score_quests()
+
+    async def new_quest(self, ctx):
+        self.send_daily_message()
     @commands.Cog.listener()
     async def on_message(self, message):
         if len(message.content) == 0:
