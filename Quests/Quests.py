@@ -61,7 +61,7 @@ class Quests(commands.Cog):
         """Run role setup when bot is ready."""
         for guild in self.bot.guilds:
             await self.setup_guild_roles(guild)
-        self.send_daily_message.start()
+        self.send_daily_message_task.start()
         self.score_quests.start()
 
     def cog_unload(self):
@@ -625,8 +625,11 @@ class Quests(commands.Cog):
     async def go_score(self, ctx):
         self.score_quests()
 
+    @is_owner_overridable()
+    @commands.command()
     async def new_quest(self, ctx):
         self.send_daily_message()
+    
     @commands.Cog.listener()
     async def on_message(self, message):
         if len(message.content) == 0:
