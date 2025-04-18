@@ -543,28 +543,24 @@ class Quests(commands.Cog):
     @is_owner_overridable()
     @commands.command() 
     async def create_faction(self, ctx, role: discord.Role):
-        roles = await self.config.guild(ctx.guild).faction_roles()
+        roles_raw = await self.config.guild(ctx.guild).faction_roles()
         scores = await self.config.guild(ctx.guild).faction_scores()
-    
+
+        roles = {int(k): v for k, v in roles_raw.items()}
+
         if role.id not in roles:
-            # Add the new faction to the roles dictionary and assign it the role name
             roles[role.id] = {'name': role.name}
-    
-            # Set the faction's score to 0 in the scores dictionary
             scores[role.id] = 0
-    
-            # Save the updated dictionaries back to the config
+
             await self.config.guild(ctx.guild).faction_roles.set(roles)
             await self.config.guild(ctx.guild).faction_scores.set(scores)
-    
+
             await ctx.send("Faction added. Here's the ones I have:")
         else:
             await ctx.send("I already have a faction by that name. Here's the ones I have:")
-    
-        # Fetch the updated roles and send the list
-        updated_roles = await self.config.guild(ctx.guild).faction_roles()
-        for role_id, role_info in updated_roles.items():
-            role_name = role_info['name']  # Access the role name from the stored dictionary
+
+        for role_id, role_info in roles.items():
+            role_name = role_info['name']
             role_obj = ctx.guild.get_role(role_id)
             if role_obj:
                 await ctx.send(f"{role_name}: {role_obj.mention}")
@@ -575,12 +571,15 @@ class Quests(commands.Cog):
     @commands.command()
     async def list_factions(self, ctx):
         """Lists all registered factions."""
-        roles = await self.config.guild(ctx.guild).faction_roles()
-        if not roles:
+        roles_raw = await self.config.guild(ctx.guild).faction_roles()
+        if not roles_raw:
             await ctx.send("No factions have been created yet.")
             return
-        
-        for role_id, role_name in roles.items():
+
+        roles = {int(k): v for k, v in roles_raw.items()}
+
+        for role_id, role_data in roles.items():
+            role_name = role_data.get("name", "Unknown")
             role_obj = ctx.guild.get_role(role_id)
             if role_obj:
                 await ctx.send(f"{role_name}: {role_obj.mention}")
@@ -591,9 +590,12 @@ class Quests(commands.Cog):
     @commands.command()
     async def remove_faction(self, ctx, role: discord.Role):
         """Removes a faction."""
-        roles = await self.config.guild(ctx.guild).faction_roles()
+        roles_raw = await self.config.guild(ctx.guild).faction_roles()
         scores = await self.config.guild(ctx.guild).faction_scores()
-        
+
+        roles = {int(k): v for k, v in roles_raw.items()}
+        scores = {int(k): v for k, v in scores.items()}
+
         if role.id in roles:
             del roles[role.id]
             del scores[role.id]
