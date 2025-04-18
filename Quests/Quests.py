@@ -44,11 +44,11 @@ class Quests(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         """Run role setup when bot is ready."""
-        self.send_daily_message.start()
+        self.send_daily_message_task.start()
         self.score_quests.start()
 
     def cog_unload(self):
-        self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
+        self.send_daily_message_task.cancel()  # Stop the task if the cog is unloaded
 
     async def ocr(url):
         suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
@@ -122,7 +122,7 @@ class Quests(commands.Cog):
     
         return [game, quest]
         
-    @send_daily_message.before_loop
+    @send_daily_message_task.before_loop()
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready() 
 
@@ -138,7 +138,7 @@ class Quests(commands.Cog):
             if count > 0:
                 self.fetch_messages(channel_id, guild)
 
-    @score_quests.before_loop
+    @score_quests_task.before_loop()
     async def before_score_quest(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(86400)
