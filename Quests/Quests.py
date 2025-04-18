@@ -84,6 +84,9 @@ class Quests(commands.Cog):
 
     @tasks.loop(hours=25)
     # @tasks.loop(minutes=1)
+    async def send_daily_message_task(self):
+        self.send_daily_message()
+
     async def send_daily_message(self):
         print("Executing quest task")
         try:
@@ -141,6 +144,9 @@ class Quests(commands.Cog):
         await self.bot.wait_until_ready() 
 
     @tasks.loop(hours=25)
+    async def score_quests_task(self):
+        self.score_quests()
+
     async def score_quests(self):
         """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
@@ -613,6 +619,18 @@ class Quests(commands.Cog):
             await ctx.send(f"Faction `{role.name}` removed.")
         else:
             await ctx.send("Faction not found.")
+
+    @is_owner_overridable()
+    @commands.command()
+    async def score_now(self, ctx):
+        """Forces the scoring to start (end the day)"""
+        self.score_quests()
+
+    @is_owner_overridable()
+    @commands.command()
+    async def new_quest(self, ctx):
+        """Force sends a new quest -- new day"""
+        self.send_daily_message()
 
     @commands.Cog.listener()
     async def on_message(self, message):
