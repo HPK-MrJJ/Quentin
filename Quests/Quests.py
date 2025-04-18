@@ -122,7 +122,7 @@ class Quests(commands.Cog):
     
         return [game, quest]
         
-    @send_daily_message_task.before_loop()
+    @send_daily_message_task.before_loop
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready() 
 
@@ -138,7 +138,7 @@ class Quests(commands.Cog):
             if count > 0:
                 self.fetch_messages(channel_id, guild)
 
-    @score_quests_task.before_loop()
+    @score_quests_task.before_loop
     async def before_score_quest(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(86400)
