@@ -51,7 +51,7 @@ class Quests(commands.Cog):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
     async def ocr(url):
-       suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
+        suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             temp_path = temp_file.name
 
