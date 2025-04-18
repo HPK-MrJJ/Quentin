@@ -9,6 +9,10 @@ import cv2
 import pandas as pd
 import aiohttp
 import aiofiles
+import tempfile
+
+import aiopytesseract
+
 import discord
 from discord.ext import tasks
 
@@ -33,7 +37,6 @@ class Quests(commands.Cog):
             quests_role_id=None,
             quest_count=0,
             current_quest=None,
-            api_key=None,
             faction_roles={},
             faction_scores={},
         )
@@ -64,65 +67,20 @@ class Quests(commands.Cog):
     def cog_unload(self):
         self.send_daily_message.cancel()  # Stop the task if the cog is unloaded
 
-    async def ocr(self, guild, url, max_retries=5, initial_delay=1):
-        retry_count = 0
-        delay = initial_delay  # Initial delay in seconds
+    async def ocr(url):
+       suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_path = temp_file.name
 
-        while retry_count < max_retries:
-            try:
-                api_key = await self.config.guild(guild).api_key()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                resp.raise_for_status()
+                async with aiofiles.open(temp_path, 'wb') as f:
+                    await f.write(await resp.read())
 
-                # Payload for the OCR API
-                payload = {
-                    'apikey': api_key,
-                    'url': url,
-                    'language': 'eng',
-                    'isOverlayRequired': False,
-                }
-            
-                # Making the async request
-                async with aiohttp.ClientSession() as session:
-                    async with session.post("https://api.ocr.space/parse/image", data=payload) as response:
-                        if response.status != 200:
-                            raise Exception(f"Error: API request failed with status code {response.status}")
-                        
-                        # Parse the JSON response
-                        result = await response.json()
-                        
-                        if result['IsErroredOnProcessing']:
-                            raise Exception(result['ErrorMessage'][0])
-                    
-                        return result['ParsedText']
-            
-            except Exception as e:
-                retry_count += 1
-                if retry_count >= max_retries:
-                    raise Exception(f"Max retries reached. Last error: {e}")
-
-
-                status_values = []
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(url="https://status.ocr.space/") as response:
-                            # Parse the HTML content with BeautifulSoup
-                            soup = BeautifulSoup(response.text, 'html.parser')
-
-                            # Find all td elements with the classes "tb_b_right", "tb_b_left", and "tb_b_right"
-                            td_elements = soup.find_all('td', class_='tb_b_right')
-
-                            # Extract the text from each td element
-                            status_values = [td.get_text(strip=True) for td in td_elements]
-                except Exception as e:
-                    print("Damn even the front end is down")
-
-                if status_values[0] == 'DOWN' or status_values[1] == 'DOWN':
-                    print("One or more of the APIs is down, this may take a while/not work")
-
-                    await self.enter_long_term_wait(self, channel_id = await self.config.guild(guild).quests_channel_id())
-                
-                print(f"Retry {retry_count}/{max_retries} after error: {e}")
-                await asyncio.sleep(delay)  # Exponential backoff
-                delay *= 2  # Double the delay for the next retry
+        text = await aiopytesseract.image_to_string(temp_path)
+        os.remove(temp_path)
+        return text
 
     @tasks.loop(hours=25)
     # @tasks.loop(minutes=1)
@@ -133,23 +91,19 @@ class Quests(commands.Cog):
                 channel_id = await self.config.guild(guild).quests_channel_id()
                 role_id = await self.config.guild(guild).quests_role_id() 
                 quest_count = await self.config.guild(guild).quest_count()
-                api_key = await self.config.guild(guild).api_key()
     
                 channel = self.bot.get_channel(channel_id)
-                if api_key:
-                    if channel:
-                        if role_id:
-                            duple = await self.write_quest()
-                            message = duple[1]
-                            await channel.send(f"<@&{role_id}>\n{message}")
-                            await self.config.guild(guild).quests_count.set(quest_count+1)
-                            await self.config.guild(guild).current_quest.set(duple[0])
-                        else:
-                            print("Please set the quests role id.")
+                if channel:
+                    if role_id:
+                        duple = await self.write_quest()
+                        message = duple[1]
+                        await channel.send(f"<@&{role_id}>\n{message}")
+                        await self.config.guild(guild).quests_count.set(quest_count+1)
+                        await self.config.guild(guild).current_quest.set(duple[0])
                     else:
-                        print("Please set the quests channel id.")
+                        print("Please set the quests role id.")
                 else:
-                    print("Please set the OCR API key.")
+                    print("Please set the quests channel id.")
         except asyncio.CancelledError:
             print("Winding down the quest task.")
             raise
@@ -185,31 +139,6 @@ class Quests(commands.Cog):
     @send_daily_message.before_loop
     async def before_send_daily_message(self):
         await self.bot.wait_until_ready() 
-
-    async def enter_long_term_wait(self, channel_id):
-        channel = self.bot.get_channel(channel_id)
-        channel.send("Hi there. The OCR API is currently down or experiencing super high latency. It might be a while before I can score these. I'll check every five minutes to see if it is back, and let you know when it comes back.")
-        up = False
-        while not up:
-            try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(url="https://status.ocr.space/") as response:
-                            # Parse the HTML content with BeautifulSoup
-                            soup = BeautifulSoup(response.text, 'html.parser')
-
-                            # Find all td elements with the classes "tb_b_right", "tb_b_left", and "tb_b_right"
-                            td_elements = soup.find_all('td', class_='tb_b_right')
-
-                            # Extract the text from each td element
-                            status_values = [td.get_text(strip=True) for td in td_elements]
-            except Exception as e:
-                print("Damn even the front end is down")
-            if status_values[0] == 'UP' and status_values[1] == 'UP':
-                up = True
-            else:
-                print("still down, will check again in five min")
-                asynchio.sleep(310)
-        channel.send("Things are back up again so I will go back to scoring.")
 
     @tasks.loop(hours=25)
     async def score_quests(self):
@@ -274,7 +203,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
         
-        pattern = r'SCORE\r\n([0-9]+)'
+        pattern = r'2048 (\d+)\|'
         match = re.search(pattern, text)
     
         if match:
@@ -367,41 +296,14 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r'HI\s[a-zA-Z0-9]{5}\s([a-zA-Z0-9]{5})'
+        pattern = r'HI (\d+) '
         match = re.search(pattern, text)
 
         if match:
             score_raw = match.group(1)
-            if score_raw.isdigit():
-                true_score = int(score_raw)
-            else:
-                if (score_raw[0] == '0' and score_raw[1] == '0') or ((score_raw[0] == 'o' or score_raw[0] == 'O') and (score_raw[1] == 'o' or score_raw[1] == 'O')) :
-                    if score_raw[2].isdigit():
-                        if int(score-raw[2]) >= 5:
-                            dkp = 10
-                        else:
-                            dkp = 5
-                    elif score_raw[2] == 'S' or score_raw[2] == 's':
-                        dkp = 10
-                    else:
-                        dkp = 5
-                elif score_raw[1].isdigit():
-                    if int(score_raw[1]) > 2:
-                        dkp = 20
-                    elif int(score_raw[1]) < 2:
-                        dkp = 10
-                    elif int(score_raw[1]) == 2 and (int(score-raw[2]) >= 5 or (score_raw[2] == 'S' or score_raw[2] == 's')) :
-                        dkp = 20
-                    else:
-                        dkp = 10
-                else:
-                    if score_raw[1] == 'l' or score_raw[1] == 'I':
-                        dkp = 10
-                    else:
-                        dkp = 20
-                        
+            
             truth = await find_faction(dkp, guild, message)
-                
+            
             return truth
         
         else:
@@ -415,7 +317,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r'000.*?(\d+)m'
+        pattern = r'(\d+)m'
         match = re.search(pattern, image_contents)
 
         if match:
@@ -443,7 +345,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r"\b\d+\b"
+        pattern = r'was (\d+)'
         match = re.search(pattern, text)
 
         if match:
@@ -545,7 +447,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
 
-        pattern = r'\r\n(\d+(?:,\d+)*)\r\n'
+        pattern = r'FINAL SCORE\n([\d,]+)'
 
         match = re.search(pattern, image_contents)
 
@@ -648,13 +550,6 @@ class Quests(commands.Cog):
         """Set the role for daily messages."""
         await self.config.guild(ctx.guild).quests_role_id.set(role.id) 
         await ctx.send(f"Quests role ID set to {role.mention}.")
-    
-    @is_owner_overridable()
-    @commands.command()
-    async def set_key(self, ctx, key: str):
-        """Set the api key for the OCR API."""
-        await self.config.guild(ctx.guild).api_key.set(key)
-        await ctx.send("API Key set.")
         
     @is_owner_overridable()
     @commands.command() 
