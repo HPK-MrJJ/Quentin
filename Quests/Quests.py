@@ -609,13 +609,13 @@ class Quests(commands.Cog):
     @commands.command()
     async def score_now(self, ctx):
         """Forces the scoring to start (end the day)"""
-        self.score_quests()
+        await self.score_quests()
 
     @is_owner_overridable()
     @commands.command()
     async def new_quest(self, ctx):
         """Force sends a new quest -- new day"""
-        self.send_daily_message()
+        await self.send_daily_message()
 
     @commands.Cog.listener()
     async def on_message(self, message):
