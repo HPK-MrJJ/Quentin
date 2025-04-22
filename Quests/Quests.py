@@ -136,7 +136,7 @@ class Quests(commands.Cog):
             count = await self.config.guild(guild).quest_count()
             channel_id = await self.config.guild(guild).quests_channel_id()
             if count > 0:
-                self.fetch_messages(channel_id, guild)
+                await self.fetch_messages(channel_id, guild)
 
     @score_quests_task.before_loop
     async def before_score_quest(self):
