@@ -144,15 +144,16 @@ class Quests(commands.Cog):
         await asyncio.sleep(86400)
 
     async def fetch_messages(self, channel_id, guild):
-        """get the messages that need scoring and send them to the scoring method"""
-        channel = self.bot.get_channel(channel_id)
-        last_quest = datetime.now() - timedelta(hours=23, minutes=59)
-        current_quest = await self.config.guild(guild).current_quest()
-        async for message in channel.history(after=last_quest):
-            if self.scored(guild, message, str(current_quest)): # the scored method scores the message and returns true if it scored, otherwise false
-                await self.bot.add_reaction(message, "✅")
-            else:
-                await self.bot.add_reaction(message, "❌")
+    """get the messages that need scoring and send them to the scoring method"""
+    channel = self.bot.get_channel(channel_id)
+    last_quest = datetime.now() - timedelta(hours=23, minutes=59)
+    current_quest = await self.config.guild(guild).current_quest()
+
+    async for message in channel.history(after=last_quest):
+        if await self.scored(guild, message, str(current_quest)):
+            await message.add_reaction("✅")
+        else:
+            await message.add_reaction("❌")
 
     async def scored(self, guild, message: discord.Message, quest_name: str):
         """direct the program to the right method to score the quest of the day"""
