@@ -45,12 +45,12 @@ class Quests(commands.Cog):
     async def on_ready(self):
         """Run role setup when bot is ready."""
         self.send_daily_message_task.start()
-        self.score_quests.start()
+        self.score_quests_task.start()
 
     def cog_unload(self):
         self.send_daily_message_task.cancel()  # Stop the task if the cog is unloaded
 
-    async def ocr(url):
+    async def ocr(self, url):
         suffix = os.path.splitext(url.split('?')[0])[1] or ".img"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             temp_path = temp_file.name
@@ -68,7 +68,7 @@ class Quests(commands.Cog):
     @tasks.loop(hours=25)
     # @tasks.loop(minutes=1)
     async def send_daily_message_task(self):
-        self.send_daily_message()
+        await self.send_daily_message()
 
     async def send_daily_message(self):
         print("Executing quest task")
@@ -84,7 +84,7 @@ class Quests(commands.Cog):
                         duple = await self.write_quest()
                         message = duple[1]
                         await channel.send(f"<@&{role_id}>\n{message}")
-                        await self.config.guild(guild).quests_count.set(quest_count+1)
+                        await self.config.guild(guild).quest_count.set(quest_count+1)
                         await self.config.guild(guild).current_quest.set(duple[0])
                     else:
                         print("Please set the quests role id.")
@@ -128,7 +128,7 @@ class Quests(commands.Cog):
 
     @tasks.loop(hours=25)
     async def score_quests_task(self):
-        self.score_quests()
+        await self.score_quests()
 
     async def score_quests(self):
         """start the scoring process if there are quests to score"""
@@ -193,7 +193,7 @@ class Quests(commands.Cog):
         image_contents = await self.ocr(guild, image.url)
         
         pattern = r'2048 (\d+)\|'
-        match = re.search(pattern, text)
+        match = re.search(pattern, image_contents)
     
         if match:
             score = int(match.group(1))
@@ -286,7 +286,7 @@ class Quests(commands.Cog):
         image_contents = await self.ocr(guild, image.url)
 
         pattern = r'HI (\d+) '
-        match = re.search(pattern, text)
+        match = re.search(pattern, image_contents)
 
         if match:
             score_raw = match.group(1)
@@ -362,8 +362,9 @@ class Quests(commands.Cog):
 
         if match:
 
+            score_str = match.group(1)
             if score.isdigit():
-                score = int(match.group(1))
+                score = int(score_str)
 
                 if score <= 3:
                     dkp = 10
@@ -412,6 +413,7 @@ class Quests(commands.Cog):
 
         if match:
             score = match.group(1)
+            score= int(score)
             if score < 30:
                 dkp = 20
             elif score < 50:
@@ -447,7 +449,7 @@ class Quests(commands.Cog):
             elif score > 20000:
                 dkp = 10
             else:
-                score = 5
+                dkp = 5
         else:
             return False
 
@@ -495,13 +497,13 @@ class Quests(commands.Cog):
             else:
                 break  # Stop checking further if a fruit is missing
         
-        if fruit == "Peach":
+        if highest_fruit == "Peach":
             dkp = 3
-        elif fruit == "Pineapple":
+        elif highest_fruit == "Pineapple":
             dkp = 5
-        elif fruit == "Melon":
+        elif highest_fruit == "Melon":
             dkp = 7
-        elif fruit == "Watermelon":
+        elif highest_fruit == "Watermelon":
             dkp = 10
         else:
             dkp = 1
