@@ -624,7 +624,7 @@ class Quests(commands.Cog):
     @commands.command()
     async def show_scores(self, ctx):
         """Shows the scores for each faction"""
-        score_log = await self.config.guild(guild).faction_scores()
+        score_log = await self.config.guild(ctx.guild).faction_scores()
         message = ""
         for faction, score in score_log:
             message += f"**{faction}**: {score} DKP"
