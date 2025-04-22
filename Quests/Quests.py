@@ -620,6 +620,16 @@ class Quests(commands.Cog):
         """Force sends a new quest -- new day"""
         await self.send_daily_message()
 
+    @is_owner_overridable()
+    @commands.command()
+    async def show_scores(self, ctx):
+        """Shows the scores for each faction"""
+        score_log = await self.config.guild(guild).faction_scores()
+        message = ""
+        for faction, score in score_log:
+            message += f"**{faction}**: {score} DKP"
+        ctx.send(message)
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if len(message.content) == 0:
