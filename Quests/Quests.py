@@ -657,6 +657,6 @@ class Quests(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-    first_char = message.content[0] if message.content else ''
-    if message.author.bot or not first_char.isalpha():
-        return
+        first_char = message.content[0] if message.content else ''
+        if message.author.bot or not first_char.isalpha():
+            return
