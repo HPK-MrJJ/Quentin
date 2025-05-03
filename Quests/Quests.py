@@ -30,6 +30,7 @@ class Quests(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69312578, force_registration=True)
+        self.last_run_time = datetime.utcnow()
 
         # Register config with role IDs instead of role objects
         self.config.register_guild(
@@ -134,10 +135,11 @@ class Quests(commands.Cog):
         """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
             count = await self.config.guild(guild).quest_count()
-            channel_id = await self.config.guild(guild).quests_channel_id()
-            if count > 0:
-                await self.fetch_messages(channel_id, guild)
-
+        if os.path.exists(score_file_path):
+            with open(score_file_path, "r") as f:
+                scored_messages = set(json.load(f))
+        else:
+            scored_messages = set()
     @score_quests_task.before_loop
     async def before_score_quest(self):
         await self.bot.wait_until_ready()
@@ -146,16 +148,23 @@ class Quests(commands.Cog):
     async def fetch_messages(self, channel_id, guild):
         """get the messages that need scoring and send them to the scoring method"""
         channel = self.bot.get_channel(channel_id)
-        last_quest = datetime.now() - timedelta(hours=23, minutes=59)
+        after = self.last_run_time
+        self.last_run_time = datetime.utcnow()
         current_quest = await self.config.guild(guild).current_quest()
+        found = False
     
+            found = True
         async for message in channel.history(after=last_quest):
-            if await self.scored(guild, message, str(current_quest)):
+        async for message in channel.history(limit=100, after=after):
+            if message.id in scored_messages:
                 await message.add_reaction("✅")
             else:
                 await message.add_reaction("❌")
-
-    async def scored(self, guild, message: discord.Message, quest_name: str):
+                await self.score_message(message, channel)
+        if not found:
+            await ctx.send("No messages found to score.")
+            return
+        json.dump(list(scored_messages), f)
         """direct the program to the right method to score the quest of the day"""
         quest_name = quest_name.lower()
         if quest_name == '2048':
@@ -632,7 +641,7 @@ class Quests(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if len(message.content) == 0:
+        for faction, score in score_log.items():
           return
         
         first_char = message.content[0]
