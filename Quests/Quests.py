@@ -30,7 +30,6 @@ class Quests(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=69312578, force_registration=True)
-        self.last_run_time = datetime.utcnow()
 
         # Register config with role IDs instead of role objects
         self.config.register_guild(
@@ -135,59 +134,35 @@ class Quests(commands.Cog):
         """start the scoring process if there are quests to score"""
         for guild in self.bot.guilds:
             count = await self.config.guild(guild).quest_count()
-        if os.path.exists(score_file_path):
-            with open(score_file_path, "r") as f:
-                scored_messages = set(json.load(f))
-        else:
-            scored_messages = set()
+            channel_id = await self.config.guild(guild).quests_channel_id()
+            if count > 0:
+                await self.fetch_messages(channel_id, guild)
+
     @score_quests_task.before_loop
     async def before_score_quest(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(86400)
 
     async def fetch_messages(self, channel_id, guild):
-        """Get the messages that need scoring and send them to the scoring method"""
+        """get the messages that need scoring and send them to the scoring method"""
         channel = self.bot.get_channel(channel_id)
-        after = self.last_run_time
-        self.last_run_time = datetime.utcnow()
+        last_quest = datetime.now() - timedelta(hours=23, minutes=59)
+        current_quest = await self.config.guild(guild).current_quest()
     
-        score_file_path = f"{guild.id}_score_log.json"
-        if os.path.exists(score_file_path):
-            with open(score_file_path, "r") as f:
-                scored_messages = set(json.load(f))
-        else:
-            scored_messages = set()
-    
-        found = False
-        async for message in channel.history(limit=100, after=after):
-            found = True
-            if message.id in scored_messages:
+        async for message in channel.history(after=last_quest):
+            if await self.scored(guild, message, str(current_quest)):
                 await message.add_reaction("✅")
             else:
                 await message.add_reaction("❌")
-                await self.score_message(message, channel)
-                scored_messages.add(message.id)
-    
-        with open(score_file_path, "w") as f:
-            json.dump(list(scored_messages), f)
-    
-        if not found:
-            print("No messages found to score.")
 
-
-    async def score_message(self, guild, message):
-        """Direct the program to the right method to score the quest of the day"""
-        quest_name = await self.config.guild(guild).current_quest()
-        if not quest_name:
-            return False
-    
+    async def scored(self, guild, message: discord.Message, quest_name: str):
+        """direct the program to the right method to score the quest of the day"""
         quest_name = quest_name.lower()
-    
         if quest_name == '2048':
             return self.number_game_score(guild, message)
         elif quest_name == 'worldle':
             return self.worLdle_score(guild, message)
-        elif 'globle' in quest_name:
+        elif 'globle' in quest_name: # score globle and globle-capital the same way
             return self.globle_score(guild, message)
         elif quest_name == 'dinosaur game':
             return self.dino_score(guild, message)
@@ -218,7 +193,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
         
-        pattern = r'\d+\s*points'
+        pattern = r'2048 (\d+)\|'
         match = re.search(pattern, image_contents)
     
         if match:
@@ -657,6 +632,9 @@ class Quests(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        first_char = message.content[0] if message.content else ''
+        if len(message.content) == 0:
+          return
+        
+        first_char = message.content[0]
         if message.author.bot or not first_char.isalpha():
-            return
+          return
