@@ -146,32 +146,48 @@ class Quests(commands.Cog):
         await asyncio.sleep(86400)
 
     async def fetch_messages(self, channel_id, guild):
-        """get the messages that need scoring and send them to the scoring method"""
+        """Get the messages that need scoring and send them to the scoring method"""
         channel = self.bot.get_channel(channel_id)
         after = self.last_run_time
         self.last_run_time = datetime.utcnow()
-        current_quest = await self.config.guild(guild).current_quest()
-        found = False
     
-            found = True
-        async for message in channel.history(after=last_quest):
+        score_file_path = f"{guild.id}_score_log.json"
+        if os.path.exists(score_file_path):
+            with open(score_file_path, "r") as f:
+                scored_messages = set(json.load(f))
+        else:
+            scored_messages = set()
+    
+        found = False
         async for message in channel.history(limit=100, after=after):
+            found = True
             if message.id in scored_messages:
                 await message.add_reaction("✅")
             else:
                 await message.add_reaction("❌")
                 await self.score_message(message, channel)
+                scored_messages.add(message.id)
+    
+        with open(score_file_path, "w") as f:
+            json.dump(list(scored_messages), f)
+    
         if not found:
-            await ctx.send("No messages found to score.")
-            return
-        json.dump(list(scored_messages), f)
-        """direct the program to the right method to score the quest of the day"""
+            print("No messages found to score.")
+
+
+    async def score_message(self, guild, message):
+        """Direct the program to the right method to score the quest of the day"""
+        quest_name = await self.config.guild(guild).current_quest()
+        if not quest_name:
+            return False
+    
         quest_name = quest_name.lower()
+    
         if quest_name == '2048':
             return self.number_game_score(guild, message)
         elif quest_name == 'worldle':
             return self.worLdle_score(guild, message)
-        elif 'globle' in quest_name: # score globle and globle-capital the same way
+        elif 'globle' in quest_name:
             return self.globle_score(guild, message)
         elif quest_name == 'dinosaur game':
             return self.dino_score(guild, message)
