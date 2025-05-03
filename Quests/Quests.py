@@ -218,7 +218,7 @@ class Quests(commands.Cog):
         image = attachments[0]
         image_contents = await self.ocr(guild, image.url)
         
-        pattern = r'2048 (\d+)\|'
+        pattern = r'\d+\s*points'
         match = re.search(pattern, image_contents)
     
         if match:
