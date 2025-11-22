@@ -21,9 +21,9 @@ class ShareAttribution(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     @commands.command(name="debugshare")
     async def debug_share(self, ctx):
-        """Toggle debug mode to print raw delete-log messages."""
+        """Toggle debug mode to print embed data."""
         self.debug_mode = not self.debug_mode
-        await ctx.send(f"Share log debug mode: {'ON' if self.debug_mode else 'OFF'}")
+        await ctx.send(f"Share debug mode: {'ON' if self.debug_mode else 'OFF'}")
 
     # ----- Listener -----
 
@@ -33,18 +33,54 @@ class ShareAttribution(commands.Cog):
         if not log_channel_id:
             return
 
-        # ignore other channels
         if message.channel.id != log_channel_id:
             return
 
-        # DEBUG PRINTS
+        if not message.embeds:
+            return
+
+        embed = message.embeds[0]
+        desc = embed.description or ""
+
         if self.debug_mode:
             print("\n========== SHARE DEBUG ==========")
-            print("RAW CONTENT:")
-            print(repr(message.content))
-            print("EMBEDS:", message.embeds)
-            print("ATTACHMENTS:", message.attachments)
+            print("Embed description:")
+            print(repr(desc))
             print("=================================\n")
 
-        # we do NOT try to parse until we know the format
-        # after debug output, I can write the correct parser
+        # The logger bot puts everything inside the *description*
+        lower = desc.lower()
+
+        # Make sure it's actually a delete log message
+        if "message deleted" not in lower:
+            return
+
+        # Extract user + channel from description lines
+        user = None
+        channel_name = None
+
+        for line in desc.splitlines():
+            line_lower = line.lower()
+
+            if line_lower.startswith("user:"):
+                user = line.split(":", 1)[1].strip()
+
+            if line_lower.startswith("channel:"):
+                raw = line.split(":", 1)[1].strip()
+                raw = raw.lstrip("#").strip()
+                channel_name = raw.replace(" ", "-")
+
+        if not user or not channel_name:
+            return
+
+        # Find the actual channel
+        target_channel = discord.utils.get(
+            message.guild.text_channels,
+            name=channel_name
+        )
+
+        if not target_channel:
+            print("Could not find channel:", channel_name)
+            return
+
+        await target_channel.send(f"From {user}")
