@@ -24,51 +24,42 @@ class ShareAttribution(commands.Cog):
         if message.channel.id != log_channel_id:
             return
 
-        if not message.embeds:
+        # no embeds? that's normal for UnbelievaBoat delete logs
+        content = message.content or ""
+        lower = content.lower()
+
+        # must contain "message deleted"
+        if "message deleted" not in lower:
             return
 
-        embed = message.embeds[0]
+        # Try to extract "User: <value>"
+        user = None
+        channel_name = None
 
-        # ---- DEBUG PRINTS ----
-        print("==== NEW EMBED DETECTED ====")
-        print("Title:", embed.title)
-        print("Fields:")
-        for f in embed.fields:
-            print(" -", repr(f.name), ":", repr(f.value))
-        print("============================")
+        lines = content.splitlines()
 
-        # Try looser matching:
-        title = (embed.title or "").lower()
-        if "deleted" not in title:
+        for line in lines:
+            if line.lower().startswith("user:"):
+                user = line.split(":", 1)[1].strip()
+            if line.lower().startswith("channel:"):
+                # channel name may include # and words with spaces
+                raw = line.split(":", 1)[1].strip()
+                # remove the leading "#"
+                raw = raw.lstrip("#").strip()
+                # normalize spaces → hyphens to match Discord channel naming
+                channel_name = raw.replace(" ", "-")
+
+        if not user or not channel_name:
             return
 
-        # Find anything containing "user"
-        user_field = next(
-            (f for f in embed.fields if "user" in f.name.lower()),
-            None
+        # find the actual channel
+        target_channel = discord.utils.get(
+            message.guild.text_channels,
+            name=channel_name
         )
-
-        # Find anything containing "channel"
-        channel_field = next(
-            (f for f in embed.fields if "channel" in f.name.lower()),
-            None
-        )
-
-        if not user_field or not channel_field:
-            print("User or Channel field NOT found.")
-            return
-
-        username = user_field.value.strip()
-
-        # Channel field may contain multiple formats
-        raw = channel_field.value
-        cleaned_name = raw.split("[")[0].strip().lstrip("#").strip()
-        cleaned_name = cleaned_name.replace(" ", "-")
-
-        target_channel = discord.utils.get(message.guild.text_channels, name=cleaned_name)
 
         if not target_channel:
-            print("Target channel not found:", cleaned_name)
+            print("Could not find channel:", channel_name)
             return
 
-        await target_channel.send(f"From {username}")
+        await target_channel.send(f"From {user}")
