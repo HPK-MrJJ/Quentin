@@ -1,8 +1,9 @@
 import discord
+import re
 from redbot.core import commands, Config
 
 class ShareAttribution(commands.Cog):
-    """Track deleted music/share messages and repost the sender."""
+    """Tracks deleted share messages and reposts who sent them."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -10,22 +11,17 @@ class ShareAttribution(commands.Cog):
         self.config.register_global(log_channel=None)
         self.debug_mode = False
 
-    # ----- Commands -----
-
     @commands.admin_or_permissions(manage_guild=True)
     @commands.command(name="setsharelog")
     async def set_share_log(self, ctx, channel: discord.TextChannel):
         await self.config.log_channel.set(channel.id)
-        await ctx.send(f"Log channel set to {channel.mention}")
+        await ctx.send(f"Share log channel set to {channel.mention}")
 
     @commands.admin_or_permissions(manage_guild=True)
     @commands.command(name="debugshare")
     async def debug_share(self, ctx):
-        """Toggle debug mode to print embed data."""
         self.debug_mode = not self.debug_mode
         await ctx.send(f"Share debug mode: {'ON' if self.debug_mode else 'OFF'}")
-
-    # ----- Listener -----
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -48,39 +44,47 @@ class ShareAttribution(commands.Cog):
             print(repr(desc))
             print("=================================\n")
 
-        # The logger bot puts everything inside the *description*
-        lower = desc.lower()
-
-        # Make sure it's actually a delete log message
-        if "message deleted" not in lower:
+        # Only activate on real delete-log messages
+        if "**User:**" not in desc or "**Channel:**" not in desc:
             return
 
-        # Extract user + channel from description lines
+        lines = desc.splitlines()
         user = None
         channel_name = None
 
-        for line in desc.splitlines():
-            line_lower = line.lower()
+        # regex to find text inside backticks: `text`
+        backtick_re = re.compile(r"`([^`]+)`")
 
-            if line_lower.startswith("user:"):
-                user = line.split(":", 1)[1].strip()
+        for line in lines:
+            lower = line.lower()
 
-            if line_lower.startswith("channel:"):
-                raw = line.split(":", 1)[1].strip()
-                raw = raw.lstrip("#").strip()
-                channel_name = raw.replace(" ", "-")
+            if lower.startswith("**user:**"):
+                # extract the backticked readable name
+                m = backtick_re.search(line)
+                if m:
+                    user = m.group(1).strip()
+                else:
+                    # fallback: use entire line
+                    user = line.replace("**User:**", "").strip()
+
+            if lower.startswith("**channel:**"):
+                m = backtick_re.search(line)
+                if m:
+                    raw = m.group(1).strip()   # like "#beyond-the-veil"
+                    raw = raw.lstrip("#").strip()
+                    channel_name = raw
 
         if not user or not channel_name:
             return
 
-        # Find the actual channel
+        # find target channel
         target_channel = discord.utils.get(
             message.guild.text_channels,
             name=channel_name
         )
 
         if not target_channel:
-            print("Could not find channel:", channel_name)
+            print("Target channel not found:", channel_name)
             return
 
         await target_channel.send(f"From {user}")
