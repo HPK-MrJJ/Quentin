@@ -74,7 +74,7 @@ class ShareAttribution(commands.Cog):
         # Build username text if possible
         member = message.guild.get_member(user_id)
         if member:
-            from_text = f"From **@{member.display_name}**"
+            from_text = f"From **{member.display_name}**"
         else:
             from_text = f"From <@{user_id}>"
     
