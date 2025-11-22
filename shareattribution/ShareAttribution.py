@@ -9,23 +9,11 @@ class ShareAttribution(commands.Cog):
         self.config = Config.get_conf(self, identifier=92837462873)
         self.config.register_global(log_channel=None)
 
-    # ----- Commands -----
-
     @commands.admin_or_permissions(manage_guild=True)
     @commands.command(name="setsharelog")
     async def set_share_log(self, ctx, channel: discord.TextChannel):
-        """Set the message-delete log channel to monitor."""
         await self.config.log_channel.set(channel.id)
-        await ctx.send(f"Share attribution log channel set to: {channel.mention}")
-
-    @commands.admin_or_permissions(manage_guild=True)
-    @commands.command(name="clearsharelog")
-    async def clear_share_log(self, ctx):
-        """Clear the log channel."""
-        await self.config.log_channel.set(None)
-        await ctx.send("Share attribution log channel cleared.")
-
-    # ----- Listener -----
+        await ctx.send(f"Log channel set to {channel.mention}")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -33,36 +21,54 @@ class ShareAttribution(commands.Cog):
         if not log_channel_id:
             return
 
-        # Not the log channel → ignore
         if message.channel.id != log_channel_id:
             return
 
-        # Must contain an embed
         if not message.embeds:
             return
 
         embed = message.embeds[0]
 
-        # We only care about "Message Deleted" embeds
-        if embed.title != "Message Deleted":
+        # ---- DEBUG PRINTS ----
+        print("==== NEW EMBED DETECTED ====")
+        print("Title:", embed.title)
+        print("Fields:")
+        for f in embed.fields:
+            print(" -", repr(f.name), ":", repr(f.value))
+        print("============================")
+
+        # Try looser matching:
+        title = (embed.title or "").lower()
+        if "deleted" not in title:
             return
 
-        # Extract fields
-        user_field = next((f for f in embed.fields if f.name.lower() == "user:"), None)
-        channel_field = next((f for f in embed.fields if f.name.lower() == "channel:"), None)
+        # Find anything containing "user"
+        user_field = next(
+            (f for f in embed.fields if "user" in f.name.lower()),
+            None
+        )
+
+        # Find anything containing "channel"
+        channel_field = next(
+            (f for f in embed.fields if "channel" in f.name.lower()),
+            None
+        )
 
         if not user_field or not channel_field:
+            print("User or Channel field NOT found.")
             return
 
-        # Username (may include the mention)
-        username_raw = user_field.value.strip()
+        username = user_field.value.strip()
 
-        # Channel value looks like "# classic-alt-progressive [#classic-alt-progressive]"
-        channel_name = channel_field.value.split("[")[0].strip().lstrip("#").strip()
-        target_channel = discord.utils.get(message.guild.text_channels, name=channel_name)
+        # Channel field may contain multiple formats
+        raw = channel_field.value
+        cleaned_name = raw.split("[")[0].strip().lstrip("#").strip()
+        cleaned_name = cleaned_name.replace(" ", "-")
+
+        target_channel = discord.utils.get(message.guild.text_channels, name=cleaned_name)
 
         if not target_channel:
-            return  # Channel might not exist
+            print("Target channel not found:", cleaned_name)
+            return
 
-        # Send attribution:
-        await target_channel.send(f"From {username_raw}")
+        await target_channel.send(f"From {username}")
