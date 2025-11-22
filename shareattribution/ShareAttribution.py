@@ -70,9 +70,11 @@ class ShareAttribution(commands.Cog):
             if lower.startswith("**channel:**"):
                 m = backtick_re.search(line)
                 if m:
-                    raw = m.group(1).strip()   # like "#beyond-the-veil"
-                    raw = raw.lstrip("#").strip()
-                    channel_name = raw
+                    raw = m.group(1).strip()   # e.g. "[#beyond-the-veil]"
+                    raw = raw.strip("[]")      # remove literal square brackets
+                    raw = raw.lstrip("#")      # remove the Discord hashtag
+                    channel_name = raw.strip() # final clean name
+
 
         if not user or not channel_name:
             return
