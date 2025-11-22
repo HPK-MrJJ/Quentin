@@ -24,69 +24,59 @@ class ShareAttribution(commands.Cog):
         await ctx.send(f"Share debug mode: {'ON' if self.debug_mode else 'OFF'}")
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        log_channel_id = await self.config.log_channel()
-        if not log_channel_id:
-            return
+async def on_message(self, message: discord.Message):
 
-        if message.channel.id != log_channel_id:
-            return
+    # Ignore your own bot and normal user messages
+    if not message.embeds or message.author.bot is False:
+        return
 
-        if not message.embeds:
-            return
+    # The logger bot should send an embed — ignore anything without one
+    embed = message.embeds[0]
 
-        embed = message.embeds[0]
-        desc = embed.description or ""
+    # Gather embed text
+    desc = embed.description or ""
+    title = embed.title or ""
+    fields = " ".join(f"{f.name} {f.value}" for f in embed.fields)
 
-        if self.debug_mode:
-            print("\n========== SHARE DEBUG ==========")
-            print("Embed description:")
-            print(repr(desc))
-            print("=================================\n")
+    combined = f"{title}\n{desc}\n{fields}"
 
-        # Only activate on real delete-log messages
-        if "**User:**" not in desc or "**Channel:**" not in desc:
-            return
+    # 🔍 Only continue if the embed contains a link
+    if "http://" not in combined and "https://" not in combined:
+        return
 
-        lines = desc.splitlines()
-        user = None
-        channel_name = None
+    # 🔍 Extract user mention and channel mention from the embed
+    # Your logger bot uses this format:
+    # **User:** <@1234> `Name`
+    # **Channel:** <#5678> `[#channel]`
 
-        # regex to find text inside backticks: `text`
-        backtick_re = re.compile(r"`([^`]+)`")
+    user_id = None
+    channel_id = None
 
-        for line in lines:
-            lower = line.lower()
+    # Find <@123456789>
+    m_user = re.search(r"<@!?(\d+)>", combined)
+    if m_user:
+        user_id = int(m_user.group(1))
 
-            if lower.startswith("**user:**"):
-                # extract the backticked readable name
-                m = backtick_re.search(line)
-                if m:
-                    user = m.group(1).strip()
-                else:
-                    # fallback: use entire line
-                    user = line.replace("**User:**", "").strip()
+    # Find <#123456789>
+    m_channel = re.search(r"<#(\d+)>", combined)
+    if m_channel:
+        channel_id = int(m_channel.group(1))
 
-            if lower.startswith("**channel:**"):
-                m = backtick_re.search(line)
-                if m:
-                    raw = m.group(1).strip()   # e.g. "[#beyond-the-veil]"
-                    raw = raw.strip("[]")      # remove literal square brackets
-                    raw = raw.lstrip("#")      # remove the Discord hashtag
-                    channel_name = raw.strip() # final clean name
+    # If we didn't find both, skip
+    if not user_id or not channel_id:
+        return
 
+    target_channel = message.guild.get_channel(channel_id)
+    if not target_channel:
+        print(f"[sharebot] Channel not found: {channel_id}")
+        return
 
-        if not user or not channel_name:
-            return
+    # Build username text if possible
+    member = message.guild.get_member(user_id)
+    if member:
+        from_text = f"From **@{member.display_name}**"
+    else:
+        from_text = f"From <@{user_id}>"
 
-        # find target channel
-        target_channel = discord.utils.get(
-            message.guild.text_channels,
-            name=channel_name
-        )
-
-        if not target_channel:
-            print("Target channel not found:", channel_name)
-            return
-
-        await target_channel.send(f"From {user}")
+    # Send the attribution message
+    await target_channel.send(from_text)
