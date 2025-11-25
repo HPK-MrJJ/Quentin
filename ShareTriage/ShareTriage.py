@@ -2,56 +2,52 @@ import re
 from redbot.core import commands, Config
 import discord
 
-URL_RE = re.compile(
-    r"(https?://[^\s]+)", 
-    flags=re.IGNORECASE
-)
+URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 
-# Remove tracking parameters like si=
-TRACKING_PARAMS = {"si", "sp", "share", "feature", "fbclid", "igsh", "si"}
-# (Add or remove params as needed)
-
+TRACKING_PARAMS = {
+    "si", "sp", "share", "feature", "fbclid", "igsh", "utm_source",
+    "utm_medium", "utm_campaign"
+}
 
 class ShareTriage(commands.Cog):
-    """Fallback share-fixing system."""
+    """Fallback link cleaner when NoDoxx is down."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=84693112)
+        self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_guild(triage=False)
 
     # ─────────────────────────────────────────────
-    # TOGGLE COMMANDS
+    # TOGGLE
     # ─────────────────────────────────────────────
     @commands.group()
     @commands.admin_or_permissions(manage_guild=True)
     async def triage(self, ctx):
-        """Enable/disable emergency share triage."""
+        """Enable/disable fallback link cleaning."""
         pass
 
     @triage.command()
     async def on(self, ctx):
         await self.config.guild(ctx.guild).triage.set(True)
-        await ctx.send("✔ Triage mode **enabled** — I’ll sanitize shared links.")
+        await ctx.send("✔ Triage mode enabled.")
 
     @triage.command()
     async def off(self, ctx):
         await self.config.guild(ctx.guild).triage.set(False)
-        await ctx.send("✖ Triage mode **disabled**.")
+        await ctx.send("✖ Triage mode disabled.")
 
     # ─────────────────────────────────────────────
-    # TRIAGE MESSAGE LISTENER
+    # LISTENER
     # ─────────────────────────────────────────────
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
 
-        # Ignore bots, DMs, and messages without URLs
         if message.author.bot or not message.guild:
             return
 
-        guild_config = await self.config.guild(message.guild).triage()
-        if not guild_config:
-            return
+        triage_enabled = await self.config.guild(message.guild).triage()
+        if not triage_enabled:
+            return  # ← YES, defaults OFF
 
         urls = URL_RE.findall(message.content)
         if not urls:
@@ -60,48 +56,45 @@ class ShareTriage(commands.Cog):
         cleaned_any = False
         cleaned_content = message.content
 
-        # Clean each URL
         for url in urls:
-            if "?si=" in url or "&si=" in url or "?share" in url:
+            cleaned = self.clean_url(url)
+            if cleaned != url:
                 cleaned_any = True
-                cleaned = self.clean_url(url)
                 cleaned_content = cleaned_content.replace(url, cleaned)
 
         if not cleaned_any:
-            return  # Nothing needed
+            return
 
-        # Delete original message
+        # Remove original
         try:
             await message.delete()
         except discord.Forbidden:
             return
 
-        # Repost corrected content
-        final_text = f"**From {message.author.mention}:**\n{cleaned_content}"
-
-        await message.channel.send(final_text)
+        # Repost cleaned version ONLY — your other cog handles attribution
+        await message.channel.send(cleaned_content)
 
     # ─────────────────────────────────────────────
-    # URL CLEANING
+    # URL CLEANER
     # ─────────────────────────────────────────────
     def clean_url(self, url: str) -> str:
         """
-        Remove tracking/share parameters from a URL
-        e.g. ?si=xxxxx or &si=xxxxx or &feature=share
+        Removes tracking params like ?si=… &si=… etc.
+        Keeps the rest of the URL as-is.
         """
         if "?" not in url:
             return url
 
         base, query = url.split("?", 1)
+        new_params = []
 
-        # Break params apart
-        parts = []
-        for param in query.split("&"):
-            key = param.split("=")[0].lower()
+        for p in query.split("&"):
+            key = p.split("=")[0].lower()
             if key not in TRACKING_PARAMS:
-                parts.append(param)
+                new_params.append(p)
 
-        if not parts:
+        # No params left?
+        if not new_params:
             return base
 
-        return base + "?" + "&".join(parts)
+        return base + "?" + "&".join(new_params)
