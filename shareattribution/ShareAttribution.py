@@ -26,28 +26,30 @@ class ShareAttribution(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
     
-        # Ignore your own bot and normal user messages
+        # ignore bots except logger bot embeds
         if not message.embeds or message.author.bot is False:
             return
     
-        # The logger bot should send an embed — ignore anything without one
         embed = message.embeds[0]
     
-        # Gather embed text
+        # ----- NEW: Ignore "Message Edited" logs -----
+        title = (embed.title or "").lower()
+        author_name = (embed.author.name or "").lower()
+    
+        # Only process deleted-message logs
+        if "deleted" not in title and "deleted" not in author_name:
+            return
+        # ---------------------------------------------
+    
+        # Existing extraction logic below this line
         desc = embed.description or ""
-        title = embed.title or ""
+        title_text = embed.title or ""
         fields = " ".join(f"{f.name} {f.value}" for f in embed.fields)
+        combined = f"{title_text}\n{desc}\n{fields}"
     
-        combined = f"{title}\n{desc}\n{fields}"
-    
-        # 🔍 Only continue if the embed contains a link
+        # Only proceed if the embed contains a link
         if "http://" not in combined and "https://" not in combined:
             return
-    
-        # 🔍 Extract user mention and channel mention from the embed
-        # Your logger bot uses this format:
-        # **User:** <@1234> `Name`
-        # **Channel:** <#5678> `[#channel]`
     
         user_id = None
         channel_id = None
