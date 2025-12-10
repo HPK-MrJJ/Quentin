@@ -78,7 +78,7 @@ REACTION_SCORE_CAP = 3
 class ServerWrapped(commands.Cog):
     """Create a '[Server] Wrapped' summary for a user for a given year."""
 
-    def __init__(self):
+    def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_guild(**DEFAULTS)
 
