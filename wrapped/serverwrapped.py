@@ -1,195 +1,328 @@
-import discord
-from discord.ext import commands
-from datetime import datetime, timezone, timedelta
 import re
-import spacy
-from collections import Counter, defaultdict
+import asyncio
+from collections import Counter
+from datetime import datetime, timezone
+from typing import List, Optional, Tuple
 
-# Load spaCy model once
-nlp = spacy.load("en_core_web_sm")
+import discord
+from redbot.core import commands, Config
 
+import nltk
+from nltk import word_tokenize, pos_tag
+from nltk.corpus import stopwords
+from nltk.util import ngrams
+
+# Ensure NLTK data is downloaded
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('stopwords')
+
+STOPWORDS = set(stopwords.words('english'))
+
+URL_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+MENTION_RE = re.compile(r"^(\s*<@!?\d+>\s*)+$")
+ONLY_ANY_EMOJI_RE = re.compile(
+    r"^(?:\s*(?:[\U0001F300-\U0001FAFF\u2600-\u27BF]|<a?:\w+:\d+>|:[a-zA-Z0-9_~]+:)\s*)+$"
+)
+CUSTOM_EMOJI_RE = re.compile(r"<a?:\w+:\d+>")
+UNICODE_EMOJI_RE = re.compile(
+    "[" 
+    "\U0001F600-\U0001F64F"
+    "\U0001F300-\U0001F5FF"
+    "\U0001F680-\U0001F6FF"
+    "\U0001F1E0-\U0001F1FF"
+    "]+", flags=re.UNICODE
+)
+COLON_EMOJI_RE = re.compile(r"^:[a-zA-Z0-9_~]+:$")
+
+MIN_HIGHLIGHT_LEN = 10
+MAX_HIGHLIGHT_LEN = 350
+
+SCORE_WEIGHTS = {
+    "length": 2,
+    "attachment": 3,
+    "emoji": 1,
+    "rare_word": 1,
+    "question": 1,
+    "reactions": 1,
+    "mentions": -1,
+    "url": -1
+}
+REACTION_SCORE_CAP = 3
+
+DEFAULTS = {"channels": []}
 
 class ServerWrapped(commands.Cog):
+    """Server Wrapped summary"""
+
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config.register_guild(**DEFAULTS)
 
-    # Utility ----------------------
+    # -------------------
+    # Setup command
+    # -------------------
+    @commands.guild_only()
+    @commands.admin_or_permissions(administrator=True)
+    @commands.command(name="serverwrapped-setup", usage="<#channel|id> [#channel2 ...]")
+    async def setup(self, ctx: commands.Context, *channels: discord.TextChannel):
+        if not channels:
+            await ctx.send("Provide at least one channel to include in scans.")
+            return
+        channel_ids = [c.id for c in channels]
+        await self.config.guild(ctx.guild).channels.set(channel_ids)
+        await ctx.send(f"Wrapped will scan {len(channel_ids)} channels.")
 
-    def clean_text(self, text: str) -> str:
-        # Strip channel IDs, mentions, URLs, emojis, etc.
-        text = re.sub(r"<a?:\w+:\d+>", "", text)  # emoji markup
-        text = re.sub(r"<[#@]\d+>", "", text)  # channel/user mentions
-        text = re.sub(r"https?://\S+", "", text)
-        text = text.replace("\n", " ")
-        return text.strip()
+    # -------------------
+    # Main command
+    # -------------------
+    @commands.guild_only()
+    @commands.command(name="serverwrapped", aliases=["wrapped"])
+    async def wrapped(self, ctx: commands.Context, member: Optional[discord.Member] = None, year: Optional[int] = None):
+        target = member or ctx.author
+        year = year or datetime.now(timezone.utc).year
 
-    def extract_topics(self, messages):
-        """
-        Use spaCy to extract "real" topics:
-        - noun chunks + named entities
-        - but filter out common junk ("man", "thing", "based", "idk", etc.)
-        - filter out any tokens that are only digits (old channel IDs)
-        - consolidate similar terms (case-insensitive)
-        """
-        topic_counter = Counter()
-        junk = {"man", "thing", "things", "dont know", "idk", "based", "ok", "yes"}
+        allowed_channel_ids = await self.config.guild(ctx.guild).channels()
+        if not allowed_channel_ids:
+            await ctx.send("No channels configured. Admin must run `[p]serverwrapped-setup` first.")
+            return
+
+        start = datetime(year, 1, 1, tzinfo=timezone.utc)
+        end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        if target.joined_at and target.joined_at.replace(tzinfo=timezone.utc) > start:
+            start = target.joined_at.replace(tzinfo=timezone.utc)
+
+        await ctx.typing()
+        messages = []
+        for cid in allowed_channel_ids:
+            ch = ctx.guild.get_channel(cid)
+            if not ch or not isinstance(ch, discord.TextChannel):
+                continue
+            try:
+                async for m in ch.history(limit=None, after=start, before=end, oldest_first=True):
+                    if m.author and m.author.id == target.id and not m.author.bot:
+                        messages.append(m)
+            except discord.Forbidden:
+                continue
+            except discord.HTTPException:
+                await asyncio.sleep(1)
+                continue
+            await asyncio.sleep(0)
+
+        if not messages:
+            await ctx.send(f"{target} had no messages in configured channels for {year}.")
+            return
+
+        stats = self._analyze_messages(messages)
+
+        embed = discord.Embed(title=f"{ctx.guild.name} Wrapped — {year}", color=discord.Color.brand_red())
+        embed.set_author(name=str(target), icon_url=target.avatar.url if target.avatar else None)
+
+        # How year started
+        first_msg = min(messages, key=lambda m: m.created_at)
+        first_topic = stats["topics"][0] if stats["topics"] else "chatting"
+        embed.add_field(
+            name="How the year started",
+            value=f"You started off the year strong with a discussion about **{first_topic}**:\n{self._shorten(first_msg.content)}",
+            inline=False
+        )
+
+        # Most common topics
+        topics_pretty = " · ".join(stats["topics"][:6]) if stats["topics"] else "—"
+        embed.add_field(name="Most common topics", value=topics_pretty, inline=False)
+
+        # Sidekicks
+        sidekicks_pretty = "\n".join(f"{i+1}. {name} — {count} msgs" for i, (name, count) in enumerate(stats["sidekicks"][:8])) if stats["sidekicks"] else "—"
+        embed.add_field(name="Most common sidekicks", value=sidekicks_pretty, inline=False)
+
+        # Emojis
+        emojis_pretty = " ".join(e for e, _ in stats["emojis"][:12]) if stats["emojis"] else "—"
+        embed.add_field(name="Most used emojis", value=emojis_pretty, inline=False)
+
+        # Summary
+        st_lines = [
+            f"Total messages: **{len(messages)}**",
+            f"Attachments posted: **{stats['attachments']}**",
+            f"Messages with reactions: **{stats['reacted_messages']}**",
+        ]
+        embed.add_field(name="Summary", value="\n".join(st_lines), inline=False)
+
+        # Highlight
+        if stats["highlight"]:
+            highlight_msg, _ = stats["highlight"]
+            hl_text = f"{self._shorten(highlight_msg.content)}\n— in <#{highlight_msg.channel.id}> on {highlight_msg.created_at.date()}"
+            embed.add_field(name="Highlight", value=hl_text, inline=False)
+        else:
+            embed.add_field(name="Highlight", value="Couldn't find a suitable highlight.", inline=False)
+
+        await ctx.send(embed=embed)
+
+    # -------------------
+    # Analysis
+    # -------------------
+    def _analyze_messages(self, messages: List[discord.Message]) -> dict:
+        channels_counter = Counter()
+        sidekick_counter = Counter()
+        emoji_counter = Counter()
+        all_words = []
+        candidate_highlights = []
+        total_attachments = 0
+        reacted_messages = 0
 
         for m in messages:
-            text = self.clean_text(m.content)
-            if not text:
+            channels_counter[m.channel.name] += 1
+            if m.attachments:
+                total_attachments += len(m.attachments)
+            if m.reactions:
+                reacted_messages += 1
+
+            # sidekicks
+            if m.reference and m.reference.resolved and isinstance(m.reference.resolved, discord.Message):
+                ref = m.reference.resolved
+                sidekick_counter[ref.author.display_name] += 1
+            for u in m.mentions:
+                if u.id != m.author.id:
+                    sidekick_counter[u.display_name] += 1
+
+            # emojis
+            for match in CUSTOM_EMOJI_RE.findall(m.content):
+                emoji_counter[match] += 1
+            for match in UNICODE_EMOJI_RE.findall(m.content):
+                emoji_counter[match] += 1
+            for token in m.content.split():
+                if COLON_EMOJI_RE.match(token):
+                    emoji_counter[token] += 1
+
+            # words for topics
+            text_no_url = URL_RE.sub("", m.content or "")
+            tokens = [w.lower() for w in word_tokenize(text_no_url) if w.isalpha()]
+            tokens = [t for t in tokens if t not in STOPWORDS]
+            all_words.append(tokens)
+
+            candidate_highlights.append(m)
+
+        # topics: noun/adjective bigrams and trigrams
+        topics = self._extract_topics(all_words)
+
+        # highlight
+        highlight_msg, highlight_attach = self._choose_highlight(candidate_highlights, all_words)
+
+        return {
+            "topics": topics,
+            "sidekicks": sidekick_counter.most_common(),
+            "emojis": emoji_counter.most_common(),
+            "attachments": total_attachments,
+            "reacted_messages": reacted_messages,
+            "highlight": (highlight_msg, highlight_attach)
+        }
+
+    def _extract_topics(self, list_of_wordlists: List[List[str]]) -> List[str]:
+        counts = Counter()
+        for words in list_of_wordlists:
+            # POS tagging for nouns/adjectives
+            pos = pos_tag(words)
+            nouns_adj = [w for w, p in pos if p.startswith("NN") or p.startswith("JJ")]
+            # bigrams and trigrams
+            for n in [2, 3]:
+                for gram in ngrams(nouns_adj, n):
+                    counts[" ".join(gram)] += 1
+        # filter low counts
+        return [t for t, c in counts.most_common(20) if c >= 2]
+
+    def _choose_highlight(self, candidates: List[discord.Message], all_words: List[List[str]]) -> Tuple[Optional[discord.Message], Optional[str]]:
+        best_score = -9999
+        best_msg = None
+        best_attach_url = None
+
+        word_counts = Counter([w for sublist in all_words for w in sublist])
+        common_words_set = {w for w, _ in word_counts.most_common(200)}
+
+        for m in candidates:
+            if not self._is_message_valid_for_highlight(m):
                 continue
 
-            doc = nlp(text)
-
-            # Extract noun chunks
-            for chunk in doc.noun_chunks:
-                topic = chunk.text.lower()
-                topic = re.sub(r"[^a-zA-Z0-9\s]", "", topic).strip()
-
-                if not topic or topic in junk:
-                    continue
-                if topic.isdigit():
-                    continue
-
-                topic_counter[topic] += 1
-
-            # Extract named entities
-            for ent in doc.ents:
-                topic = ent.text.lower().strip()
-                topic = re.sub(r"[^a-zA-Z0-9\s]", "", topic)
-
-                if not topic or topic in junk:
-                    continue
-                if topic.isdigit():
-                    continue
-
-                topic_counter[topic] += 1
-
-        return topic_counter.most_common(10)
-
-    def pick_interesting_message(self, messages):
-        """
-        Highlight scoring system:
-        + Longer messages
-        + Contains nouns / entities (spaCy)
-        + Contains media embeds
-        + Contains punctuation variety
-        """
-        best_msg = None
-        best_score = -1
-
-        for m in messages:
-            text = m.content
             score = 0
+            content = (m.content or "").strip()
 
-            if len(text) > 40:
-                score += len(text) / 50  # length
+            # length
+            if MIN_HIGHLIGHT_LEN <= len(content) <= MAX_HIGHLIGHT_LEN:
+                score += SCORE_WEIGHTS["length"]
 
-            doc = nlp(text)
-            score += len([t for t in doc if t.pos_ in {"NOUN", "PROPN"}]) * 0.4
+            # attachments
+            image_url = None
+            for a in m.attachments:
+                if a.content_type and a.content_type.startswith("image"):
+                    image_url = a.url
+                    break
+                if a.filename.lower().endswith((".gif", ".png", ".jpg", ".jpeg", ".webp")):
+                    image_url = a.url
+                    break
+            if image_url:
+                score += SCORE_WEIGHTS["attachment"]
 
-            if m.attachments:
-                score += 3
+            # emojis
+            emoji_count = len(UNICODE_EMOJI_RE.findall(content)) + len(CUSTOM_EMOJI_RE.findall(content))
+            if 1 <= emoji_count <= 3:
+                score += SCORE_WEIGHTS["emoji"]
 
-            if any(p in text for p in ["?", "!", ":"]):
-                score += 1
+            # question
+            if "?" in content:
+                score += SCORE_WEIGHTS["question"]
+
+            # reactions
+            reaction_count = sum(r.count for r in m.reactions)
+            score += min(reaction_count * SCORE_WEIGHTS["reactions"], REACTION_SCORE_CAP)
+
+            # url / mentions penalty
+            if URL_RE.search(content):
+                score += SCORE_WEIGHTS["url"]
+            if m.mentions:
+                score += SCORE_WEIGHTS["mentions"]
+
+            # rare word
+            words = [w.lower() for w in word_tokenize(URL_RE.sub("", content)) if w.isalpha()]
+            if any(w not in common_words_set and w not in STOPWORDS and len(w) > 2 for w in words):
+                score += SCORE_WEIGHTS["rare_word"]
+
+            # freshness tie-breaker
+            freshness = (m.created_at - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds() / 1e9
+            score += freshness * 1e-6
 
             if score > best_score:
                 best_score = score
                 best_msg = m
+                best_attach_url = image_url
 
-        return best_msg
+        return best_msg, best_attach_url
 
-    # Command ----------------------
+    def _is_message_valid_for_highlight(self, m: discord.Message) -> bool:
+        if not m.content and not m.attachments:
+            return False
+        if m.author.bot:
+            return False
+        content = (m.content or "").strip()
+        if content and (len(content) < MIN_HIGHLIGHT_LEN or len(content) > MAX_HIGHLIGHT_LEN):
+            if not m.attachments:
+                return False
+        if content and URL_RE.sub("", content).strip() == "":
+            return False
+        if MENTION_RE.match(content):
+            return False
+        if ONLY_ANY_EMOJI_RE.match(content):
+            return False
+        if content.startswith(("!", ".", "-", "~", "/")):
+            return False
+        return True
 
-    @commands.command(name="serverwrapped")
-    async def serverwrapped(self, ctx):
-        await ctx.typing()
+    def _shorten(self, text: str, limit: int = 240) -> str:
+        if not text:
+            return "—"
+        t = text.strip()
+        if len(t) <= limit:
+            return t
+        return t[:limit-1].rsplit(" ", 1)[0] + "…"
 
-        guild = ctx.guild
-
-        # Define earliest timezone → Jan 1, 2025 @ 00:00 UTC–12
-        earliest_tz = timezone(timedelta(hours=-12))
-        year_start = datetime(2025, 1, 1, 0, 0, tzinfo=earliest_tz)
-
-        # Collect all messages newer than year_start
-        messages = []
-        for channel in guild.text_channels:
-            try:
-                async for msg in channel.history(limit=None, after=year_start):
-                    messages.append(msg)
-            except:
-                continue
-
-        if not messages:
-            await ctx.send("I couldn't find any messages from this year.")
-            return
-
-        # 1. HOW THE YEAR STARTED -------------------------
-        early_msgs = [m for m in messages if (m.created_at - year_start).days < 7]
-        if early_msgs:
-            topics = self.extract_topics(early_msgs)
-            if topics:
-                first_topic = topics[0][0]
-                year_intro = f"You kicked off the year chatting about **{first_topic}**, setting the tone early."
-            else:
-                year_intro = "The year began quietly, with some light banter in the first week."
-        else:
-            year_intro = "The year began with no recorded activity in the first week."
-
-        # 2. COMMON TOPICS -------------------------------
-        topics = self.extract_topics(messages)
-        topic_str = "\n".join(f"- **{t}**" for t, _ in topics) if topics else "No clear topics emerged."
-
-        # 3. SIDEKICKS (users you talk with the most) ----
-        partner_counter = Counter()
-        for m in messages:
-            if m.author != ctx.author:
-                partner_counter[m.author] += 1
-
-        sidekicks = partner_counter.most_common(5)
-        sidekick_str = "\n".join(f"- **{u.display_name}**" for u, _ in sidekicks) if sidekicks else "None."
-
-        # 4. MOST USED EMOJIS ----------------------------
-        emoji_pattern = re.compile(r"[\U0001F300-\U0001FAFF]")
-        emoji_counter = Counter()
-
-        for m in messages:
-            for e in emoji_pattern.findall(m.content):
-                emoji_counter[e] += 1
-
-        emoji_str = (
-            ", ".join(f"{e}" for e, _ in emoji_counter.most_common(10))
-            if emoji_counter
-            else "No emojis found."
-        )
-
-        # 5. SUMMARY (simple) ---------------------------
-        total_msgs = len(messages)
-        total_users = len({m.author.id for m in messages})
-        summary = f"This year saw **{total_msgs}** messages from **{total_users}** participants."
-
-        # 6. HIGHLIGHT -----------------------------------
-        highlight = self.pick_interesting_message(messages)
-        if highlight:
-            jump = highlight.jump_url
-            highlight_text = highlight.content[:400] or "[Attachment]"
-            highlight_field = f"{highlight.author.display_name}: {highlight_text}\n[[Jump to message]]({jump})"
-        else:
-            highlight_field = "No highlight available."
-
-        # BUILD EMBED -----------------------------------
-        embed = discord.Embed(
-            title=f"{guild.name} — Wrapped 2025",
-            color=discord.Color.blurple(),
-        )
-
-        embed.add_field(name="How the Year Began", value=year_intro, inline=False)
-        embed.add_field(name="Most Common Topics", value=topic_str, inline=False)
-        embed.add_field(name="Sidekicks", value=sidekick_str, inline=False)
-        embed.add_field(name="Most Used Emojis", value=emoji_str, inline=False)
-        embed.add_field(name="Summary", value=summary, inline=False)
-        embed.add_field(name="Highlight of the Year", value=highlight_field, inline=False)
-
-        # SEND -------------------------------------------
-        await ctx.send(embed=embed)
+# Cog setup
+def setup(bot):
+    bot.add_cog(ServerWrapped(bot))
