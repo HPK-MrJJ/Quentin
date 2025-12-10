@@ -133,7 +133,7 @@ class ServerWrapped(commands.Cog):
             start = target.joined_at.replace(tzinfo=timezone.utc)
 
         # Gather messages
-        await ctx.trigger_typing()
+        await ctx.typing()
         messages = []
         channel_objs = []
         for cid in allowed_channel_ids:
